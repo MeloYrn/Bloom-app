@@ -1,0 +1,29 @@
+{
+  "name": "bloom-frontend",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web"
+  },
+  "dependencies": {
+    "@stomp/stompjs": "^7.3.0",
+    "axios": "^1.18.0",
+    "expo": "~54.0.34",
+    "expo-router": "^56.2.11",
+    "expo-secure-store": "^56.0.4",
+    "expo-status-bar": "~3.0.9",
+    "react": "19.1.0",
+    "react-native": "0.81.5",
+    "react-native-calendars": "^1.1314.0",
+    "sockjs-client": "^1.6.1",
+    "zustand": "^5.0.14"
+  },
+  "devDependencies": {
+    "@types/react": "~19.1.0",
+    "typescript": "~5.9.2"
+  },
+  "private": true
+}
