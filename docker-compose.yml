@@ -62,5 +62,17 @@ services:
       - postgres
       - tracking-service
 
+  education-service:
+    build: ./bloom-education-service
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/bloom_db
+      SPRING_DATASOURCE_USERNAME: bloom
+      SPRING_DATASOURCE_PASSWORD: bloom123
+      SERVER_PORT: 8085
+    depends_on:
+      - postgres
+
 volumes:
   pgdata:
