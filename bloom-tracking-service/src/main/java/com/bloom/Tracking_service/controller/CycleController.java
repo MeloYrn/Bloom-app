@@ -37,4 +37,12 @@ public class CycleController {
             @RequestHeader("X-User-Id") String userId) {
         return ResponseEntity.ok(cycleService.predict(UUID.fromString(userId)));
     }
+
+    // Internal endpoint used by the notification service's daily reminder job.
+    // Not user-facing - no X-User-Id header needed.
+    @GetMapping("/predictions-due")
+    public ResponseEntity<List<UUID>> getUsersWithUpcomingPeriod(
+            @RequestParam(defaultValue = "3") int withinDays) {
+        return ResponseEntity.ok(cycleService.getUsersWithUpcomingPeriod(withinDays));
+    }
 }
