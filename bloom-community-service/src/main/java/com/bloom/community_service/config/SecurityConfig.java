@@ -13,13 +13,9 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             .csrf(csrf -> csrf.disable())
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                // /ws/** must stay open - SockJS handshake requests hit plain HTTP first
-                .requestMatchers("/ws/**").permitAll()
-                .requestMatchers("/api/community/**").permitAll()
-                .anyRequest().permitAll()
-            );
+            .sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
         return http.build();
     }
 }

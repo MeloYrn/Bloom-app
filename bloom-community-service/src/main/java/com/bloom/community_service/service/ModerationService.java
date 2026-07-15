@@ -5,13 +5,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * Lightweight keyword-based moderation.
- * This is a basic first line of defense for the demo - it flags posts
- * containing banned/dangerous keywords for human review. It does NOT
- * delete or block posts automatically; isFlagged just surfaces them
- * to moderators.
- */
+
 @Service
 public class ModerationService {
 

@@ -17,12 +17,12 @@ public class PseudonymService {
         "Jasmine", "Violet", "Iris", "Poppy", "Zinnia"
     };
 
-    private final Random random = new Random();
 
     public String generate() {
+        Random random = new Random();
         String color = COLORS[random.nextInt(COLORS.length)];
         String flower = FLOWERS[random.nextInt(FLOWERS.length)];
         int number = random.nextInt(99) + 1;
-        return color + flower + number; // e.g. PurpleOrchid42, TealLily7
+        return color + flower + number; 
     }
 }
