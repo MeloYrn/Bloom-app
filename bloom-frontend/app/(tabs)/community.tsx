@@ -21,7 +21,7 @@ const CHANNELS = ['general', 'cramps', 'discharge', 'mental-health', 'contracept
 
 type Post = {
   id: string;
-  pseudonym: string;
+  pseudonym?: string | null;
   channel: string;
   content: string;
   upvotes: number;
@@ -86,7 +86,11 @@ export default function CommunityScreen() {
     }
   };
 
-  const getInitials = (name: string) => name.substring(0, 2).toUpperCase();
+  const getInitials = (name?: string | null) => {
+    const safeName = (name ?? 'Anonymous').trim();
+    if (!safeName) return 'AN';
+    return safeName.substring(0, 2).toUpperCase();
+  };
 
   return (
     <KeyboardAvoidingView
@@ -109,6 +113,7 @@ export default function CommunityScreen() {
         showsHorizontalScrollIndicator={false}
         renderItem={({ item }) => (
           <TouchableOpacity
+            key={item}
             style={[styles.channelBtn, channel === item && styles.channelBtnActive]}
             onPress={() => setChannel(item)}
           >
@@ -124,13 +129,13 @@ export default function CommunityScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ padding: 16 }}
         renderItem={({ item }) => (
-          <View style={styles.postCard}>
+          <View key={item.id} style={styles.postCard}>
             <View style={styles.postMeta}>
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>{getInitials(item.pseudonym)}</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.pseudonym}>{item.pseudonym}</Text>
+                <Text style={styles.pseudonym}>{item.pseudonym || 'Anonymous'}</Text>
                 <View style={styles.channelTag}>
                   <Text style={styles.channelTagText}>#{item.channel}</Text>
                 </View>

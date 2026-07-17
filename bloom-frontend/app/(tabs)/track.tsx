@@ -193,7 +193,11 @@ export default function TrackScreen() {
             value={startDate}
             mode="date"
             display="default"        
-            onChange={(event, date) => date && setStartDate(date)}
+            onChange={(_event: any, date?: Date | null) => {
+              if (date) {
+                setStartDate(date);
+              }
+            }}
           />
 
           <Text style={styles.label}>Flow Level</Text>

@@ -1,163 +1,205 @@
-import { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { trackingApi } from '../../services/api';
+import { useAuthStore } from '../../store/auth.store';
 
-const TOTAL_STEPS = 3;
+const PHASE_TIPS: Record<string, string> = {
+  menstrual: 'Your body is shedding the uterine lining. Rest, stay warm, and eat iron-rich foods like leafy greens and beans.',
+  follicular: 'Energy levels are rising! Great time to start new activities and be social. Your body is preparing to ovulate.',
+  ovulatory: 'You are at peak energy and confidence. Fertile window is open — great time for important conversations and decisions.',
+  luteal: 'Progesterone is peaking. Reduce caffeine, increase magnesium-rich foods like dark chocolate and bananas to ease PMS.',
+};
 
-const COLOR_OPTIONS = [
-  { label: 'Clear', emoji: '⚪' },
-  { label: 'White / Cream', emoji: '🤍' },
-  { label: 'Yellow / Green', emoji: '🟡' },
-  { label: 'Brown / Pink', emoji: '🟤' },
-];
+const getPhase = (dayOfCycle: number, cycleLength: number): string => {
+  if (dayOfCycle <= 5) return 'menstrual';
+  if (dayOfCycle <= cycleLength / 2 - 2) return 'follicular';
+  if (dayOfCycle <= cycleLength / 2 + 2) return 'ovulatory';
+  return 'luteal';
+};
 
-const CONSISTENCY_OPTIONS = [
-  { label: 'Watery', emoji: '💧' },
-  { label: 'Creamy', emoji: '🥛' },
-  { label: 'Stretchy', emoji: '🧴' },
-  { label: 'Thick / Chunky', emoji: '❄️' },
-];
+const getPhaseEmoji = (phase: string): string => {
+  const emojis: Record<string, string> = {
+    menstrual: '🌑',
+    follicular: '🌒',
+    ovulatory: '🌕',
+    luteal: '🌖',
+  };
+  return emojis[phase] || '🌸';
+};
 
-const ODOR_OPTIONS = [
-  { label: 'None / Mild', emoji: '✅' },
-  { label: 'Strong / Unusual', emoji: '⚠️' },
-  { label: 'Fishy', emoji: '🚨' },
-];
+export default function HomeScreen() {
+  const [daysUntil, setDaysUntil] = useState<number | null>(null);
+  const [nextPeriod, setNextPeriod] = useState<string | null>(null);
+  const [cycleDay, setCycleDay] = useState<number | null>(null);
+  const [cycleLength, setCycleLength] = useState(28);
+  const [phase, setPhase] = useState('luteal');
+  const [loading, setLoading] = useState(true);
+  const { displayName } = useAuthStore();
+  const router = useRouter();
 
-export default function DischargeScreen() {
-  const [step, setStep] = useState(1);
-  const [answers, setAnswers] = useState<string[]>([]);
+  useEffect(() => {
+    loadData();
+  }, []);
 
-  const handleAnswer = (value: string) => {
-    const newAnswers = [...answers, value];
-    setAnswers(newAnswers);
-    if (step < TOTAL_STEPS) {
-      setStep(step + 1);
-    } else {
-      setStep(4);
+  const loadData = async () => {
+    try {
+      const predictRes = await trackingApi.get('/api/cycles/predict');
+      const historyRes = await trackingApi.get('/api/cycles/history');
+
+      if (predictRes.data.nextPeriod) {
+        const next = new Date(predictRes.data.nextPeriod);
+        const today = new Date();
+        const diff = Math.ceil((next.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        setDaysUntil(diff);
+        setNextPeriod(predictRes.data.nextPeriod);
+
+        const avgLength = parseInt(predictRes.data.averageCycleLength) || 28;
+        setCycleLength(avgLength);
+
+        if (historyRes.data.length > 0) {
+          const lastPeriod = new Date(historyRes.data[0].startDate);
+          const dayOfCycle = Math.ceil((today.getTime() - lastPeriod.getTime()) / (1000 * 60 * 60 * 24));
+          setCycleDay(dayOfCycle);
+          setPhase(getPhase(dayOfCycle, avgLength));
+        }
+      }
+    } catch (err) {
+      console.log('Failed to load dashboard data:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getResult = () => {
-    const concerning = ['Yellow / Green', 'Thick / Chunky', 'Strong / Unusual', 'Fishy'];
-    const hasConcerning = answers.some((a) => concerning.includes(a));
-
-    if (answers.includes('Fishy')) {
-      return {
-        status: 'See a Doctor',
-        color: '#DC2626',
-        emoji: '🚨',
-        message: 'Your answers suggest discharge that may need medical attention. A fishy odor can be a sign of an infection that is easily treated. Please see a healthcare provider soon.',
-      };
-    }
-    if (hasConcerning) {
-      return {
-        status: 'Worth Monitoring',
-        color: '#F59E0B',
-        emoji: '⚠️',
-        message: 'Some of your answers may indicate a change worth paying attention to. This is not a diagnosis. See a healthcare provider if symptoms persist.',
-      };
-    }
-    return {
-      status: 'Likely Normal',
-      color: '#059669',
-      emoji: '✅',
-      message: 'Your answers suggest this discharge is typical and healthy. If something still feels off, trust your body and see a healthcare provider.',
-    };
-  };
-
-  const reset = () => {
-    setStep(1);
-    setAnswers([]);
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
   };
 
   return (
-    <View style={{ flex: 1 }}>
+    <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Discharge Check</Text>
-        <Text style={styles.headerSub}>Private, judgment-free guidance</Text>
-        <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${(Math.min(step, TOTAL_STEPS) / TOTAL_STEPS) * 100}%` }]} />
+        <Text style={styles.greeting}>{getGreeting()} 🌸</Text>
+        <Text style={styles.userName}>{displayName || 'Welcome'}</Text>
+
+        <View style={styles.cycleCard}>
+          {loading ? (
+            <Text style={styles.cycleValue}>Loading...</Text>
+          ) : daysUntil !== null ? (
+            <>
+              <Text style={styles.cycleLabel}>Next Period</Text>
+              <Text style={styles.cycleValue}>
+                {daysUntil <= 0 ? 'Today' : `${daysUntil} days`}
+              </Text>
+              <Text style={styles.cycleSub}>Expected {nextPeriod} · {cycleLength}-day cycle</Text>
+              <View style={styles.cycleRow}>
+                <View style={styles.cycleMini}>
+                  <Text style={styles.miniLabel}>Phase</Text>
+                  <Text style={styles.miniValue}>{phase.charAt(0).toUpperCase() + phase.slice(1)} {getPhaseEmoji(phase)}</Text>
+                </View>
+                <View style={styles.cycleMini}>
+                  <Text style={styles.miniLabel}>Cycle Day</Text>
+                  <Text style={styles.miniValue}>{cycleDay ? `${cycleDay} / ${cycleLength}` : '--'}</Text>
+                </View>
+              </View>
+            </>
+          ) : (
+            <>
+              <Text style={styles.cycleValue}>No data yet</Text>
+              <Text style={styles.cycleSub}>Log your first period to get predictions</Text>
+            </>
+          )}
         </View>
-        <Text style={styles.progressLabel}>
-          {step <= TOTAL_STEPS ? `Step ${step} of ${TOTAL_STEPS}` : 'Complete'}
-        </Text>
       </View>
 
-      {step === 1 && (
-        <ScrollView style={styles.body}>
-          <Text style={styles.question}>What color is the discharge?</Text>
-          <Text style={styles.hint}>Select the option that best describes what you see</Text>
-          {COLOR_OPTIONS.map((opt) => (
-            <TouchableOpacity key={opt.label} style={styles.option} onPress={() => handleAnswer(opt.label)}>
-              <Text style={styles.optionEmoji}>{opt.emoji}</Text>
-              <Text style={styles.optionLabel}>{opt.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
+      <View style={styles.body}>
+        <Text style={styles.sectionTitle}>Quick Actions</Text>
+        <View style={styles.quickActions}>
+          <TouchableOpacity style={[styles.qaCard, styles.qaPink]} onPress={() => router.push('/(tabs)/track')}>
+            <Text style={styles.qaIcon}>📅</Text>
+            <Text style={styles.qaTitle}>Log Period</Text>
+            <Text style={styles.qaSub}>Track your cycle</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.qaCard, styles.qaPurple]} onPress={() => router.push('/(tabs)/community')}>
+            <Text style={styles.qaIcon}>💬</Text>
+            <Text style={styles.qaTitle}>Community</Text>
+            <Text style={styles.qaSub}>Anonymous support</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.qaCard, styles.qaTeal]} onPress={() => router.push('/(tabs)/discharge')}>
+            <Text style={styles.qaIcon}>💧</Text>
+            <Text style={styles.qaTitle}>Discharge Check</Text>
+            <Text style={styles.qaSub}>Know what's normal</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.qaCard, styles.qaOrange]} onPress={() => router.push('/(tabs)/learn')}>
+            <Text style={styles.qaIcon}>📚</Text>
+            <Text style={styles.qaTitle}>Health Library</Text>
+            <Text style={styles.qaSub}>Learn & explore</Text>
+          </TouchableOpacity>
+        </View>
 
-      {step === 2 && (
-        <ScrollView style={styles.body}>
-          <Text style={styles.question}>How would you describe the consistency?</Text>
-          <Text style={styles.hint}>Choose the closest description</Text>
-          {CONSISTENCY_OPTIONS.map((opt) => (
-            <TouchableOpacity key={opt.label} style={styles.option} onPress={() => handleAnswer(opt.label)}>
-              <Text style={styles.optionEmoji}>{opt.emoji}</Text>
-              <Text style={styles.optionLabel}>{opt.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
-
-      {step === 3 && (
-        <ScrollView style={styles.body}>
-          <Text style={styles.question}>Is there any unusual odor?</Text>
-          <Text style={styles.hint}>Be as honest as you can — this is completely private</Text>
-          {ODOR_OPTIONS.map((opt) => (
-            <TouchableOpacity key={opt.label} style={styles.option} onPress={() => handleAnswer(opt.label)}>
-              <Text style={styles.optionEmoji}>{opt.emoji}</Text>
-              <Text style={styles.optionLabel}>{opt.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
-
-      {step === 4 && (() => {
-        const result = getResult();
-        return (
-          <View style={[styles.resultBox, { borderColor: result.color }]}>
-            <Text style={styles.resultEmoji}>{result.emoji}</Text>
-            <Text style={[styles.resultStatus, { color: result.color }]}>{result.status}</Text>
-            <Text style={styles.resultMessage}>{result.message}</Text>
-            <TouchableOpacity style={styles.resetBtn} onPress={reset}>
-              <Text style={styles.resetText}>Start Again</Text>
-            </TouchableOpacity>
+        <View style={styles.tipCard}>
+          <Text style={styles.tipIcon}>💡</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.tipLabel}>Phase Tip · {phase.charAt(0).toUpperCase() + phase.slice(1)}</Text>
+            <Text style={styles.tipText}>{PHASE_TIPS[phase]}</Text>
           </View>
-        );
-      })()}
-    </View>
+        </View>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { backgroundColor: '#00695C', padding: 24, paddingTop: 50 },
-  headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#fff' },
-  headerSub: { fontSize: 13, color: '#B2DFDB', marginTop: 4 },
-  progressTrack: { backgroundColor: 'rgba(255,255,255,0.25)', height: 6, borderRadius: 4, marginTop: 16 },
-  progressFill: { backgroundColor: '#fff', height: 6, borderRadius: 4 },
-  progressLabel: { fontSize: 12, color: '#B2DFDB', marginTop: 4 },
-  body: { flex: 1, padding: 20, backgroundColor: '#fff' },
-  question: { fontSize: 20, fontWeight: 'bold', color: '#1A1A1A', marginBottom: 6 },
-  hint: { fontSize: 13, color: '#777', marginBottom: 20 },
-  option: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff',
-            borderWidth: 2, borderColor: '#E0E0E0', borderRadius: 16, padding: 16, marginBottom: 10 },
-  optionEmoji: { fontSize: 24, marginRight: 14 },
-  optionLabel: { fontSize: 15, fontWeight: '600', color: '#1A1A1A' },
-  resultBox: { flex: 1, margin: 20, padding: 24, borderRadius: 20, borderWidth: 3,
-               alignItems: 'center', justifyContent: 'center' },
-  resultEmoji: { fontSize: 48, marginBottom: 12 },
-  resultStatus: { fontSize: 22, fontWeight: 'bold', marginBottom: 12 },
-  resultMessage: { fontSize: 14, color: '#555', lineHeight: 21, textAlign: 'center', marginBottom: 24 },
-  resetBtn: { backgroundColor: '#00695C', paddingVertical: 14, paddingHorizontal: 32, borderRadius: 12 },
-  resetText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
+  container: { flex: 1, backgroundColor: '#fff' },
+  header: {
+    backgroundColor: '#C2185B',
+    padding: 24,
+    paddingTop: 50,
+  },
+  greeting: { fontSize: 14, color: 'rgba(255,255,255,0.8)', marginBottom: 2 },
+  userName: { fontSize: 26, fontWeight: 'bold', color: '#fff', marginBottom: 20, fontFamily: 'serif' },
+  cycleCard: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+  },
+  cycleLabel: { fontSize: 12, color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: 0.5 },
+  cycleValue: { fontSize: 32, fontWeight: 'bold', color: '#fff', marginTop: 4 },
+  cycleSub: { fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 4 },
+  cycleRow: { flexDirection: 'row', gap: 12, marginTop: 12 },
+  cycleMini: { flex: 1, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 12, padding: 10 },
+  miniLabel: { fontSize: 11, color: 'rgba(255,255,255,0.75)', marginBottom: 2 },
+  miniValue: { fontSize: 14, fontWeight: 'bold', color: '#fff' },
+  body: { padding: 20 },
+  sectionTitle: { fontSize: 12, fontWeight: '700', color: '#888', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 14 },
+  quickActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 20 },
+  qaCard: { width: '47%', borderRadius: 18, padding: 16 },
+  qaPink: { backgroundColor: '#FCE4EC' },
+  qaPurple: { backgroundColor: '#F3E5F5' },
+  qaTeal: { backgroundColor: '#E0F2F1' },
+  qaOrange: { backgroundColor: '#FFF3E0' },
+  qaIcon: { fontSize: 28, marginBottom: 8 },
+  qaTitle: { fontSize: 14, fontWeight: '700', color: '#1A1A1A', marginBottom: 2 },
+  qaSub: { fontSize: 12, color: '#777' },
+  tipCard: {
+    backgroundColor: '#6A1B9A',
+    borderRadius: 18,
+    padding: 16,
+    flexDirection: 'row',
+    gap: 14,
+    alignItems: 'flex-start',
+  },
+  tipIcon: { fontSize: 28 },
+  tipLabel: { fontSize: 11, color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
+  tipText: { fontSize: 13, color: 'rgba(255,255,255,0.95)', lineHeight: 19 },
 });

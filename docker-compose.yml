@@ -16,6 +16,8 @@ services:
     build: ./bloom-user-service
     ports:
       - "8081:8081"
+    expose:
+      - "8081"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/bloom_db
       SPRING_DATASOURCE_USERNAME: bloom
@@ -28,6 +30,8 @@ services:
     build: ./bloom-tracking-service
     ports:
       - "8082:8082"
+    expose:
+      - "8082"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/bloom_db
       SPRING_DATASOURCE_USERNAME: bloom
@@ -40,6 +44,8 @@ services:
     build: ./bloom-community-service
     ports:
       - "8083:8083"
+    expose:
+      - "8083"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/bloom_db
       SPRING_DATASOURCE_USERNAME: bloom
@@ -52,27 +58,16 @@ services:
     build: ./bloom-notification-service
     ports:
       - "8084:8084"
+    expose:
+      - "8084"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/bloom_db
       SPRING_DATASOURCE_USERNAME: bloom
       SPRING_DATASOURCE_PASSWORD: bloom123
       SERVER_PORT: 8084
-      TRACKING_SERVICE_URL: http://tracking-service:8082
     depends_on:
       - postgres
       - tracking-service
-
-  education-service:
-    build: ./bloom-education-service
-    ports:
-      - "8085:8085"
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/bloom_db
-      SPRING_DATASOURCE_USERNAME: bloom
-      SPRING_DATASOURCE_PASSWORD: bloom123
-      SERVER_PORT: 8085
-    depends_on:
-      - postgres
 
 volumes:
   pgdata:
