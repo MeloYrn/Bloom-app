@@ -11,6 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../store/auth.store';
 import { userApi } from '../../services/api';
+import { KeyboardAvoidingView, Platform} from 'react-native';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -38,13 +39,18 @@ export default function LoginScreen() {
   };
 
   return (
+    <KeyboardAvoidingView
+    style={{flex:1}}
+    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    > 
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.logo}>🌸</Text>
         <Text style={styles.title}>Welcome back</Text>
         <Text style={styles.subtitle}>Sign in to continue your health journey</Text>
       </View>
-
+      
+      
       <View style={styles.body}>
         <Text style={styles.label}>Email Address</Text>
         <TextInput
@@ -78,6 +84,8 @@ export default function LoginScreen() {
         </TouchableOpacity>
       </View>
     </View>
+    </KeyboardAvoidingView>
+  
   );
 }
 

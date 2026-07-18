@@ -128,6 +128,14 @@ export default function CommunityScreen() {
         data={posts}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ padding: 16 }}
+        ListEmptyComponent={
+          <View style={{ padding: 40, alignItems: 'center' }}>
+            <Text style={{ fontSize: 40, marginBottom: 10 }}>💬</Text>
+            <Text style={{ color: '#999', textAlign: 'center' }}>
+              No posts yet in this channel.{'\n'}Be the first to share!
+            </Text>
+          </View>
+        }
         renderItem={({ item }) => (
           <View key={item.id} style={styles.postCard}>
             <View style={styles.postMeta}>

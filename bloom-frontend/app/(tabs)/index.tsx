@@ -9,6 +9,8 @@ import {
 import { useRouter } from 'expo-router';
 import { trackingApi } from '../../services/api';
 import { useAuthStore } from '../../store/auth.store';
+import { ActivityIndicator } from 'react-native';
+
 
 const PHASE_TIPS: Record<string, string> = {
   menstrual: 'Your body is shedding the uterine lining. Rest, stay warm, and eat iron-rich foods like leafy greens and beans.',
@@ -41,8 +43,12 @@ export default function HomeScreen() {
   const [cycleLength, setCycleLength] = useState(28);
   const [phase, setPhase] = useState('luteal');
   const [loading, setLoading] = useState(true);
-  const { displayName } = useAuthStore();
+  const { displayName, logout } = useAuthStore();
   const router = useRouter();
+  
+  const handleLogout = async () => {
+    await logout();
+  };
 
   useEffect(() => {
     loadData();
@@ -89,10 +95,13 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <Text style={styles.greeting}>{getGreeting()} 🌸</Text>
         <Text style={styles.userName}>{displayName || 'Welcome'}</Text>
+        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
 
         <View style={styles.cycleCard}>
           {loading ? (
-            <Text style={styles.cycleValue}>Loading...</Text>
+           <ActivityIndicator size="large" color="#fff" style={{marginVertical:20}} />
           ) : daysUntil !== null ? (
             <>
               <Text style={styles.cycleLabel}>Next Period</Text>
@@ -180,6 +189,9 @@ const styles = StyleSheet.create({
   cycleMini: { flex: 1, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 12, padding: 10 },
   miniLabel: { fontSize: 11, color: 'rgba(255,255,255,0.75)', marginBottom: 2 },
   miniValue: { fontSize: 14, fontWeight: 'bold', color: '#fff' },
+  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start'},
+  logoutBtn: {  paddingVertical: 8, paddingHorizontal: 14, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 20 },
+  logoutText: { color: '#fff', fontSize: 12, fontWeight: '600' },
   body: { padding: 20 },
   sectionTitle: { fontSize: 12, fontWeight: '700', color: '#888', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 14 },
   quickActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 20 },

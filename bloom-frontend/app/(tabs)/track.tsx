@@ -10,6 +10,8 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Calendar } from 'react-native-calendars';
 import { trackingApi } from '../../services/api';
+import {RefreshControl } from 'react-native';
+
 
 const FLOW_OPTIONS = [
   { label: 'Light', value: 'light', color: '#FFCDD2' },
@@ -39,6 +41,7 @@ export default function TrackScreen() {
   const [ovulationDay, setOvulationDay] = useState<string | null>(null);
   const [symptomHistory, setSymptomHistory] = useState<any[]>([]);
   const [predictedNext, setPredictedNext] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadHistory();
@@ -98,6 +101,12 @@ export default function TrackScreen() {
     }
   };
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadHistory();
+    setRefreshing(false);
+  };
+
   const toggleSymptom = (key: string) => {
     setSelectedSymptoms((prev) =>
       prev.includes(key) ? prev.filter((s) => s !== key) : [...prev, key]
@@ -132,7 +141,11 @@ export default function TrackScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#C2185B" />
+    }
+    >
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Period Tracker</Text>
         <Text style={styles.headerSub}>Track your cycle and patterns</Text>
