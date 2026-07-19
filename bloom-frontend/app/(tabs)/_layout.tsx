@@ -13,6 +13,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="community" options={{ title: ' Community', tabBarIcon: tabIcon('💬') }} />
       <Tabs.Screen name="discharge" options={{ title: ' Discharge', tabBarIcon: tabIcon('🩺') }} />
       <Tabs.Screen name="learn" options={{ title: ' Learn', tabBarIcon: tabIcon('📚') }} />
+      <Tabs.Screen name="profile" options={{ title: ' Profile', tabBarIcon: tabIcon('👤') }} /> 
     </Tabs>
   );
 }

@@ -95,9 +95,6 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <Text style={styles.greeting}>{getGreeting()} 🌸</Text>
         <Text style={styles.userName}>{displayName || 'Welcome'}</Text>
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
 
         <View style={styles.cycleCard}>
           {loading ? (
