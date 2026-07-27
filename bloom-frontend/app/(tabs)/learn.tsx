@@ -1,59 +1,35 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, ScrollView, StyleSheet } from 'react-native';
 
-const ARTICLES = [
-  { id: '1', title: 'Understanding Your Menstrual Cycle', category: 'Cycle Basics', summary: 'Learn about the 4 phases of your cycle and what happens in your body.', readTime: '3 min read', emoji: '📅' },
-  { id: '2', title: 'What is Normal Discharge?', category: 'Discharge', summary: 'Discharge changes throughout your cycle. Learn what is normal.', readTime: '4 min read', emoji: '💧' },
-  { id: '3', title: 'Managing Period Cramps', category: 'Pain Relief', summary: 'Practical tips including heat therapy, diet, and exercise.', readTime: '5 min read', emoji: '🩹' },
-  { id: '4', title: 'Contraceptive Options in Ghana', category: 'Contraceptives', summary: 'An overview of birth control methods available locally.', readTime: '6 min read', emoji: '💊' },
-  { id: '5', title: 'PMS and Your Mood', category: 'Mental Health', summary: 'Understand the hormonal link between PMS and mood swings.', readTime: '4 min read', emoji: '🧠' },
-  { id: '6', title: 'Foods That Help During Your Period', category: 'Nutrition', summary: 'Foods that may reduce cramps and boost your energy.', readTime: '3 min read', emoji: '🥗' },
-];
-
-const CATEGORIES = ['All', 'Cycle Basics', 'Discharge', 'Pain Relief', 'Nutrition', 'Contraceptives', 'Mental Health'];
+const CATEGORIES = ['All', 'Cycle basics', 'Discharge', 'Pain relief', 'Contraceptives'];
 
 export default function LearnScreen() {
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchText, setSearchText] = useState('');
   const [selectedArticle, setSelectedArticle] = useState<any>(null);
 
-  const filteredArticles = ARTICLES.filter((article) => {
-    const matchesCategory = activeCategory === 'All' || article.category === activeCategory;
-    const matchesSearch = article.title.toLowerCase().includes(searchText.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+export default function Learn() {
+  const [category, setCategory] = useState('All');
+  const [query, setQuery] = useState('');
+  const filtered = ARTICLES.filter((a) => (category === 'All' || a.category === category) && a.title.toLowerCase().includes(query.toLowerCase()));
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#fff' }}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Health Library</Text>
-        <Text style={styles.headerSub}>Medically informed, culturally relevant</Text>
-      </View>
+    <Screen>
+      <ScrollView contentContainerStyle={{ paddingBottom: spacing.xxl }}>
+        <ScreenHeader title="Health Library" subtitle="Medically informed, culturally relevant" accentColor={colors.gold} />
 
-      <View style={styles.searchWrap}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search articles..."
-          value={searchText}
-          onChangeText={setSearchText}
-        />
-      </View>
+        <View style={styles.section}>
+          <View style={styles.searchBar}>
+            <Ionicons name="search-outline" size={16} color={colors.textMuted} />
+            <TextInput value={query} onChangeText={setQuery} placeholder="Search articles…" placeholderTextColor={colors.textFaint} style={styles.searchInput} />
+          </View>
+        </View>
 
-      <FlatList
-        horizontal
-        data={CATEGORIES}
-        keyExtractor={(item) => item}
-        style={styles.catBar}
-        showsHorizontalScrollIndicator={false}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={[styles.catChip, activeCategory === item && styles.catChipActive]}
-            onPress={() => setActiveCategory(item)}
-          >
-            <Text style={[styles.catText, activeCategory === item && styles.catTextActive]}>{item}</Text>
-          </TouchableOpacity>
-        )}
-      />
+        <View style={styles.categoryRow}>
+          {CATEGORIES.map((c) => (
+            <Chip key={c} label={c} selected={category === c} color={colors.gold} onPress={() => setCategory(c)} />
+          ))}
+        </View>
 
       <FlatList
         data={filteredArticles}
@@ -94,6 +70,7 @@ export default function LearnScreen() {
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   header: { backgroundColor: '#E65100', padding: 24, paddingTop: 50 },
   headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#fff' },

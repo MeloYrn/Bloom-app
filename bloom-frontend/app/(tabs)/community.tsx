@@ -93,17 +93,19 @@ export default function CommunityScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Community</Text>
-        <Text style={styles.headerSub}>A safe space to share and be heard</Text>
-        <View style={styles.anonBadge}>
-          <Text style={styles.anonBadgeText}>🔒 You are anonymous here</Text>
-        </View>
-      </View>
+    <Screen>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScreenHeader
+          title="Community"
+          subtitle="A safe space to share and be heard"
+          accentColor={colors.purple}
+          right={
+            <View style={styles.anonBadge}>
+              <Ionicons name="lock-closed" size={12} color={colors.purple} />
+              <Text style={[type.caption, { color: colors.purple }]}>Anonymous</Text>
+            </View>
+          }
+        />
 
       <FlatList
         horizontal
@@ -149,67 +151,45 @@ export default function CommunityScreen() {
                 </View>
               </View>
             </View>
-            <Text style={styles.postText}>{item.content}</Text>
-            <View style={styles.postActions}>
-              <TouchableOpacity style={styles.actionBtn} onPress={() => upvote(item.id)}>
-                <Text style={styles.actionText}>💗 {item.upvotes}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionBtn}>
-                <Text style={styles.actionText}>🚩 Report</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-      />
-
-      <View style={styles.inputBar}>
-        <TextInput
-          style={styles.input}
-          placeholder="Share anonymously..."
-          value={message}
-          onChangeText={setMessage}
-          multiline
+          )}
         />
-        <TouchableOpacity style={styles.sendBtn} onPress={sendPost}>
-          <Text style={styles.sendText}>➤</Text>
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+
+        <View style={styles.composer}>
+          <TextInput
+            value={draft}
+            onChangeText={setDraft}
+            placeholder="Share anonymously…"
+            placeholderTextColor={colors.textFaint}
+            style={styles.input}
+          />
+          <Pressable style={styles.sendBtn} onPress={() => setDraft('')}>
+            <Ionicons name="send" size={16} color="#FFFFFF" />
+          </Pressable>
+        </View>
+      </KeyboardAvoidingView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  header: { backgroundColor: '#6A1B9A', padding: 24, paddingTop: 50 },
-  headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#fff' },
-  headerSub: { fontSize: 13, color: '#E1BEE7', marginTop: 4 },
   anonBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginTop: 12,
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: 'rgba(138,92,246,0.14)', paddingHorizontal: 10, height: 28, borderRadius: radius.pill,
   },
-  anonBadgeText: { color: '#fff', fontSize: 12, fontWeight: '600' },
-  channelBar: { paddingVertical: 12, paddingHorizontal: 14, backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#EEE' },
-  channelBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 2, borderColor: '#E0E0E0', marginRight: 8 },
-  channelBtnActive: { backgroundColor: '#6A1B9A', borderColor: '#6A1B9A' },
-  channelText: { fontSize: 13, fontWeight: '600', color: '#777' },
-  channelTextActive: { color: '#fff' },
-  postCard: { backgroundColor: '#fff', borderRadius: 16, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: '#EEE', elevation: 1 },
-  postMeta: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  avatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#C2185B', justifyContent: 'center', alignItems: 'center', marginRight: 10 },
-  avatarText: { color: '#fff', fontWeight: 'bold', fontSize: 11 },
-  pseudonym: { fontSize: 14, fontWeight: 'bold', color: '#6A1B9A' },
-  channelTag: { backgroundColor: '#FCE4EC', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, alignSelf: 'flex-start', marginTop: 2 },
-  channelTagText: { fontSize: 10, color: '#C2185B', fontWeight: '700' },
-  postText: { fontSize: 14, color: '#333', lineHeight: 20, marginBottom: 10 },
-  postActions: { flexDirection: 'row', gap: 16 },
-  actionBtn: {},
-  actionText: { fontSize: 13, color: '#777', fontWeight: '600' },
-  inputBar: { flexDirection: 'row', padding: 12, borderTopWidth: 1, borderColor: '#EEE', alignItems: 'flex-end', backgroundColor: '#fff' },
-  input: { flex: 1, borderWidth: 2, borderColor: '#E0E0E0', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, maxHeight: 100, fontSize: 14, backgroundColor: '#FAFAFA' },
-  sendBtn: { backgroundColor: '#C2185B', borderRadius: 20, width: 40, height: 40, justifyContent: 'center', alignItems: 'center', marginLeft: 8 },
-  sendText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  categoryRow: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, marginBottom: spacing.sm },
+  post: {
+    backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
+    padding: spacing.md, marginBottom: spacing.sm,
+  },
+  postHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  postAvatar: { width: 30, height: 30, borderRadius: radius.pill, backgroundColor: colors.purple, alignItems: 'center', justifyContent: 'center' },
+  postAvatarText: { fontSize: 11, fontWeight: '700', color: '#fff' },
+  postFooter: { flexDirection: 'row', gap: spacing.lg, marginTop: spacing.sm },
+  postAction: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  composer: {
+    flexDirection: 'row', gap: spacing.sm, padding: spacing.md,
+    borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: 'rgba(18,14,28,0.9)',
+  },
+  input: { flex: 1, height: 44, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.07)', paddingHorizontal: spacing.md, color: colors.text },
+  sendBtn: { width: 44, height: 44, borderRadius: radius.pill, backgroundColor: colors.purple, alignItems: 'center', justifyContent: 'center' },
 });

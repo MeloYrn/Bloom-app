@@ -1,13 +1,5 @@
-import { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Alert,
-} from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { trackingApi } from '../../services/api';
 import {RefreshControl } from 'react-native';
@@ -121,24 +113,8 @@ export default function TrackScreen() {
         flowLevel: flow,
       });
 
-      await trackingApi.post('/api/symptoms/log', {
-        logDate: startDate.toISOString().split('T')[0],
-        cramps: selectedSymptoms.includes('cramps') ? 4 : 0,
-        mood: mood + 1,
-        energy: 3,
-        bloating: selectedSymptoms.includes('bloating'),
-        headache: selectedSymptoms.includes('headache'),
-        notes: selectedSymptoms.join(', '),
-      });
-
-      Alert.alert('Saved!', 'Your period and symptoms have been logged.');
-      loadHistory();
-    } catch (err) {
-      Alert.alert('Error', 'Could not save. Please try again.');
-    } finally {
-      setSaving(false);
-    }
-  };
+  const toggleSymptom = (s: string) =>
+    setSymptoms((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
 
   return (
     <ScrollView
@@ -179,27 +155,12 @@ export default function TrackScreen() {
              <View style={[styles.legendDot, { backgroundColor: '#CE93D8' }]} />
              <Text style={styles.legendText}>Ovulation</Text>
             </View>
-          </View>
+          </Card>
         </View>
 
-        {predictedNext && (
-          <View style={styles.predictionBanner}>
-            <Text style={styles.predictionText}>
-              🌸 Next period predicted: {predictedNext}
-            </Text>
-          </View>
-        )}
-
-{ovulationDay && (
-  <View style={styles.ovulationBanner}>
-    <Text style={styles.ovulationText}>🥚 Estimated ovulation day: {ovulationDay}</Text>
-  </View>
-)}
-        
-
-        {/* Log form */}
-        <View style={styles.logForm}>
-          <Text style={styles.sectionTitle}>📝 Log Today's Period</Text>
+        <View style={styles.section}>
+          <Card>
+            <Text style={type.h2}>Log today's period</Text>
 
           <Text style={styles.label}>Date</Text>
           <DateTimePicker
@@ -227,114 +188,42 @@ export default function TrackScreen() {
             ))}
           </View>
 
-          <Text style={styles.label}>Symptoms</Text>
-          <View style={styles.symptomGrid}>
-            {SYMPTOM_OPTIONS.map((s) => (
-              <TouchableOpacity
-                key={s.key}
-                style={[
-                  styles.symptomItem,
-                  selectedSymptoms.includes(s.key) && styles.symptomItemSelected,
-                ]}
-                onPress={() => toggleSymptom(s.key)}
-              >
-                <Text style={styles.symptomEmoji}>{s.emoji}</Text>
-                <Text style={styles.symptomLabel}>{s.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+            <Text style={[type.label, styles.fieldLabel]}>SYMPTOMS</Text>
+            <View style={styles.chipRow}>
+              {SYMPTOMS.map((s) => (
+                <Chip key={s} label={s} selected={symptoms.includes(s)} color={colors.purple} onPress={() => toggleSymptom(s)} />
+              ))}
+            </View>
 
-          <Text style={styles.label}>Mood Today</Text>
-          <View style={styles.moodRow}>
-            {MOOD_OPTIONS.map((emoji, index) => (
-              <TouchableOpacity key={index} onPress={() => setMood(index)}>
-                <Text style={[styles.moodFace, mood === index && styles.moodFaceActive]}>
-                  {emoji}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+            <Text style={[type.label, styles.fieldLabel]}>MOOD TODAY</Text>
+            <View style={styles.moodRow}>
+              {MOOD_LEVELS.map((level) => (
+                <Pressable
+                  key={level}
+                  onPress={() => setMood(level)}
+                  style={[styles.mood, level === mood && styles.moodSelected]}
+                >
+                  <MoodFace level={level} selected={level === mood} size={28} />
+                </Pressable>
+              ))}
+            </View>
 
-          <TouchableOpacity style={styles.saveBtn} onPress={saveCycle} disabled={saving}>
-            <Text style={styles.saveBtnText}>
-              {saving ? 'Saving...' : "Save Today's Log ✓"}
-            </Text>
-          </TouchableOpacity>
+            <Button label="Save today's log" onPress={() => {}} style={{ marginTop: spacing.lg }} />
+          </Card>
         </View>
-
-        {/* Symptom History */}
-        {symptomHistory.length > 0 && (
-          <View style={styles.historySection}>
-            <Text style={styles.sectionTitle}>📊 Symptom History</Text>
-            {symptomHistory.map((entry, index) => (
-              <View key={index} style={styles.historyCard}>
-                <Text style={styles.historyDate}>{entry.logDate}</Text>
-                <View style={styles.historyChipsRow}>
-                  {entry.cramps > 0 && (
-                    <View style={styles.historyChip}>
-                      <Text style={styles.historyChipText}>😣 Cramps</Text>
-                    </View>
-                  )}
-                  {entry.bloating && (
-                    <View style={styles.historyChip}>
-                      <Text style={styles.historyChipText}>😟 Bloating</Text>
-                    </View>
-                  )}
-                  {entry.headache && (
-                    <View style={styles.historyChip}>
-                      <Text style={styles.historyChipText}>🤕 Headache</Text>
-                    </View>
-                  )}
-                </View>
-                {entry.notes && <Text style={styles.historyNotes}>{entry.notes}</Text>}
-              </View>
-            ))}
-          </View>
-        )}
-
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  header: { backgroundColor: '#880E4F', padding: 24, paddingTop: 50 },
-  headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#fff' },
-  headerSub: { fontSize: 13, color: '#F8BBD0', marginTop: 4 },
-  body: { padding: 16 },
-  calendarCard: { backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: '#EEE', overflow: 'hidden', marginBottom: 16 },
-  legend: { flexDirection: 'row', padding: 12, gap: 16, borderTopWidth: 1, borderColor: '#EEE' },
+  section: { paddingHorizontal: spacing.lg, marginBottom: spacing.md },
+  legendRow: { flexDirection: 'row', gap: spacing.md, paddingTop: spacing.sm, paddingLeft: spacing.xs },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  legendDot: { width: 10, height: 10, borderRadius: 5 },
-  legendText: { fontSize: 12, color: '#777' },
-  predictionBanner: { backgroundColor: '#FCE4EC', borderRadius: 12, padding: 14, marginBottom: 16 },
-  predictionText: { color: '#880E4F', fontWeight: '600', textAlign: 'center' },
-  ovulationBanner: { backgroundColor: '#F3E5F5', borderRadius: 12, padding: 14, marginBottom: 16 },
-  ovulationText: { color: '#6A1B9A', fontWeight: '600', textAlign: 'center' },
-  logForm: { backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: '#EEE', padding: 18 },
-  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#1A1A1A', marginBottom: 12 },
-  label: { fontSize: 12, fontWeight: '700', color: '#777', textTransform: 'uppercase', marginTop: 16, marginBottom: 10 },
-  flowRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  flowChip: { flex: 1, minWidth: 70, paddingVertical: 10, borderRadius: 12, alignItems: 'center', borderWidth: 2, borderColor: 'transparent', backgroundColor: '#FAFAFA' },
-  flowChipSelected: { borderColor: '#C2185B', backgroundColor: '#FCE4EC' },
-  flowDot: { width: 20, height: 20, borderRadius: 10, marginBottom: 4 },
-  flowLabel: { fontSize: 12, fontWeight: '600' },
-  symptomGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  symptomItem: { width: '30%', backgroundColor: '#FAFAFA', borderRadius: 14, padding: 12, alignItems: 'center', borderWidth: 2, borderColor: 'transparent' },
-  symptomItemSelected: { backgroundColor: '#FCE4EC', borderColor: '#C2185B' },
-  symptomEmoji: { fontSize: 22, marginBottom: 4 },
-  symptomLabel: { fontSize: 11, fontWeight: '600', textAlign: 'center' },
-  moodRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  moodFace: { fontSize: 24, opacity: 0.4 },
-  moodFaceActive: { opacity: 1 },
-  saveBtn: { backgroundColor: '#C2185B', padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 18 },
-  saveBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-  historySection: { marginTop: 20, marginBottom: 20 },
-  historyCard: { backgroundColor: '#FAFAFA', borderRadius: 12, padding: 14, marginBottom: 10 },
-  historyDate: { fontSize: 13, fontWeight: 'bold', color: '#880E4F', marginBottom: 8 },
-  historyChipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 6 },
-  historyChip: { backgroundColor: '#FCE4EC', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10},
-  historyChipText: { fontSize: 11, color: '#c2185b', fontWeight: '600' },
-  historyNotes: { fontSize: 12, color: '#777', fontStyle: 'italic' },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  fieldLabel: { marginTop: spacing.md, marginBottom: spacing.sm },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  moodRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: spacing.sm },
+  mood: { padding: spacing.xs, borderRadius: radius.pill },
+  moodSelected: { backgroundColor: 'rgba(255,255,255,0.1)' },
 });

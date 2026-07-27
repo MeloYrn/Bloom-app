@@ -5,7 +5,7 @@ const tabIcon = (emoji: string) => ({ color }: { color: string }) => (
   <Text style={{ fontSize: 22, color }}>{emoji}</Text>
 );
 
-export default function TabsLayout() {
+export default function TabLayout() {
   return (
     <Tabs screenOptions={{ headerShown: false }}>
       <Tabs.Screen name="index" options={{ title: ' Home', tabBarIcon: tabIcon('🏠') }} />
