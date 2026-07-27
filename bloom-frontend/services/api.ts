@@ -2,7 +2,7 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
 
-const BASE_URL = 'http://172.20.10.3';
+const BASE_URL = 'http://172.20.10.5';
 
 export const userApi = axios.create({ baseURL: `${BASE_URL}:8081` });
 export const trackingApi = axios.create({ baseURL: `${BASE_URL}:8082` });

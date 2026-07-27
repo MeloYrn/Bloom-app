@@ -17,11 +17,17 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoggedIn: false,
 
   login: async (token, userId, displayName) => {
-    await SecureStore.setItemAsync('token', token);
-    await SecureStore.setItemAsync('user_id', userId);
-    set({ token, userId, displayName, isLoggedIn: true });
-  },
+  await SecureStore.setItemAsync("token", String(token));
+  await SecureStore.setItemAsync("user_id", String(userId));
+  await SecureStore.setItemAsync("display_name", String(displayName));
 
+  set({
+    token: String(token),
+    userId: String(userId),
+    displayName: String(displayName),
+    isLoggedIn: true,
+  });
+},
   logout: async () => {
     await SecureStore.deleteItemAsync('token');
     await SecureStore.deleteItemAsync('user_id');

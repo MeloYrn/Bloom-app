@@ -19,23 +19,38 @@ export default function LoginScreen() {
   const { login } = useAuthStore();
   const router = useRouter();
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
-    }
-    setLoading(true);
-    try {
-      const response = await userApi.post('/api/auth/login', { email, password });
-      const { token, userId, displayName } = response.data;
-      await login(token, userId, displayName);
-      router.replace('/(tabs)');
-    } catch (error) {
-      Alert.alert('Login Failed', 'Invalid email or password');
-    } finally {
-      setLoading(false);
-    }
-  };
+ const handleLogin = async () => {
+  if (!email || !password) {
+    Alert.alert("Error", "Please fill in all fields");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const response = await userApi.post("/api/auth/login", {
+      email,
+      password,
+    });
+
+    const { token, userId, displayName } = response.data;
+
+    await login(token, userId, displayName);
+    router.replace("/(tabs)");
+    
+  } catch (error: any) {
+    console.log("STATUS:", error?.response?.status);
+    console.log("DATA:", error?.response?.data);
+    console.log("ERROR:", error?.message);
+
+    Alert.alert(
+      "Login Failed",
+      JSON.stringify(error?.response?.data ?? error?.message)
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <View style={styles.container}>

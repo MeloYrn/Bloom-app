@@ -1,96 +1,75 @@
-import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, TextInput, Pressable, StyleSheet } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { colors, spacing, radius, type } from '../../constants/theme';
+import { Screen } from '../../components/ui/Screen';
+import { ScreenHeader } from '../../components/ui/Card';
+import { Chip } from '../../components/ui/Chip';
 
-const ARTICLES = [
-  { id: '1', title: 'Understanding Your Menstrual Cycle', category: 'Cycle Basics', summary: 'Learn about the 4 phases of your cycle and what happens in your body.', readTime: '3 min read', emoji: '📅' },
-  { id: '2', title: 'What is Normal Discharge?', category: 'Discharge', summary: 'Discharge changes throughout your cycle. Learn what is normal.', readTime: '4 min read', emoji: '💧' },
-  { id: '3', title: 'Managing Period Cramps', category: 'Pain Relief', summary: 'Practical tips including heat therapy, diet, and exercise.', readTime: '5 min read', emoji: '🩹' },
-  { id: '4', title: 'Contraceptive Options in Ghana', category: 'Contraceptives', summary: 'An overview of birth control methods available locally.', readTime: '6 min read', emoji: '💊' },
-  { id: '5', title: 'PMS and Your Mood', category: 'Mental Health', summary: 'Understand the hormonal link between PMS and mood swings.', readTime: '4 min read', emoji: '🧠' },
-  { id: '6', title: 'Foods That Help During Your Period', category: 'Nutrition', summary: 'Foods that may reduce cramps and boost your energy.', readTime: '3 min read', emoji: '🥗' },
+const CATEGORIES = ['All', 'Cycle basics', 'Discharge', 'Pain relief', 'Contraceptives'];
+
+// TODO: replace with real article data.
+const ARTICLES: { id: string; category: string; title: string; desc: string; minutes: number; icon: React.ComponentProps<typeof Ionicons>['name']; tint: string }[] = [
+  { id: '1', category: 'Cycle basics', title: 'Understanding your menstrual cycle', desc: 'Learn about the 4 phases of your cycle and what happens in your body.', minutes: 3, icon: 'calendar-outline', tint: colors.pink },
+  { id: '2', category: 'Discharge', title: 'What is normal discharge?', desc: 'Discharge changes throughout your cycle. Learn what is normal.', minutes: 4, icon: 'water-outline', tint: colors.fertile },
+  { id: '3', category: 'Pain relief', title: 'Managing period cramps', desc: 'Practical tips including heat therapy, diet, and exercise.', minutes: 5, icon: 'bandage-outline', tint: colors.gold },
+  { id: '4', category: 'Contraceptives', title: 'Contraceptive options in Ghana', desc: 'An overview of birth control methods available locally.', minutes: 6, icon: 'medkit-outline', tint: colors.purple },
 ];
 
-const CATEGORIES = ['All', 'Cycle Basics', 'Discharge', 'Pain Relief', 'Nutrition', 'Contraceptives', 'Mental Health'];
-
-export default function LearnScreen() {
-  const [activeCategory, setActiveCategory] = useState('All');
-  const [searchText, setSearchText] = useState('');
-
-  const filteredArticles = ARTICLES.filter((article) => {
-    const matchesCategory = activeCategory === 'All' || article.category === activeCategory;
-    const matchesSearch = article.title.toLowerCase().includes(searchText.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+export default function Learn() {
+  const [category, setCategory] = useState('All');
+  const [query, setQuery] = useState('');
+  const filtered = ARTICLES.filter((a) => (category === 'All' || a.category === category) && a.title.toLowerCase().includes(query.toLowerCase()));
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#fff' }}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Health Library</Text>
-        <Text style={styles.headerSub}>Medically informed, culturally relevant</Text>
-      </View>
+    <Screen>
+      <ScrollView contentContainerStyle={{ paddingBottom: spacing.xxl }}>
+        <ScreenHeader title="Health Library" subtitle="Medically informed, culturally relevant" accentColor={colors.gold} />
 
-      <View style={styles.searchWrap}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search articles..."
-          value={searchText}
-          onChangeText={setSearchText}
-        />
-      </View>
+        <View style={styles.section}>
+          <View style={styles.searchBar}>
+            <Ionicons name="search-outline" size={16} color={colors.textMuted} />
+            <TextInput value={query} onChangeText={setQuery} placeholder="Search articles…" placeholderTextColor={colors.textFaint} style={styles.searchInput} />
+          </View>
+        </View>
 
-      <FlatList
-        horizontal
-        data={CATEGORIES}
-        keyExtractor={(item) => item}
-        style={styles.catBar}
-        showsHorizontalScrollIndicator={false}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={[styles.catChip, activeCategory === item && styles.catChipActive]}
-            onPress={() => setActiveCategory(item)}
-          >
-            <Text style={[styles.catText, activeCategory === item && styles.catTextActive]}>{item}</Text>
-          </TouchableOpacity>
-        )}
-      />
+        <View style={styles.categoryRow}>
+          {CATEGORIES.map((c) => (
+            <Chip key={c} label={c} selected={category === c} color={colors.gold} onPress={() => setCategory(c)} />
+          ))}
+        </View>
 
-      <FlatList
-        data={filteredArticles}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: 16 }}
-        renderItem={({ item }) => (
-          <TouchableOpacity style={styles.card}>
-            <Text style={styles.cardEmoji}>{item.emoji}</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.cardCategory}>{item.category}</Text>
-              <Text style={styles.cardTitle}>{item.title}</Text>
-              <Text style={styles.cardSummary}>{item.summary}</Text>
-              <Text style={styles.cardTime}>{item.readTime}</Text>
-            </View>
-          </TouchableOpacity>
-        )}
-      />
-    </View>
+        <View style={styles.section}>
+          {filtered.map((a) => (
+            <Pressable key={a.id} style={styles.article}>
+              <View style={[styles.iconWrap, { backgroundColor: a.tint + '2E' }]}>
+                <Ionicons name={a.icon} size={20} color={a.tint} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[type.caption, { color: a.tint }]}>{a.category.toUpperCase()}</Text>
+                <Text style={[type.h3, { marginTop: 2 }]}>{a.title}</Text>
+                <Text style={[type.bodyMuted, { marginTop: 2 }]}>{a.desc}</Text>
+                <Text style={[type.caption, { marginTop: spacing.sm }]}>{a.minutes} min read</Text>
+              </View>
+            </Pressable>
+          ))}
+        </View>
+      </ScrollView>
+    </Screen>
   );
 }
+
 const styles = StyleSheet.create({
-  header: { backgroundColor: '#E65100', padding: 24, paddingTop: 50 },
-  headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#fff' },
-  headerSub: { fontSize: 13, color: '#FFE0B2', marginTop: 4 },
-  searchWrap: { padding: 14, backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#EEE' },
-  searchInput: { backgroundColor: '#FAFAFA', borderWidth: 2, borderColor: '#E0E0E0',
-                 borderRadius: 12, padding: 10, fontSize: 14 },
-  catBar: { paddingVertical: 12, paddingHorizontal: 14, backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#EEE' },
-  catChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 18, borderWidth: 2,
-             borderColor: '#E0E0E0', marginRight: 8 },
-  catChipActive: { backgroundColor: '#FF6D00', borderColor: '#FF6D00' },
-  catText: { fontSize: 12, fontWeight: '600', color: '#777' },
-  catTextActive: { color: '#fff' },
-  card: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12,
-          borderWidth: 1, borderColor: '#EEE', elevation: 2 },
-  cardEmoji: { fontSize: 32, marginRight: 14 },
-  cardCategory: { fontSize: 10, fontWeight: 'bold', color: '#E65100', textTransform: 'uppercase', marginBottom: 4 },
-  cardTitle: { fontSize: 15, fontWeight: 'bold', color: '#1A1A1A', marginBottom: 4 },
-  cardSummary: { fontSize: 12, color: '#777', marginBottom: 6, lineHeight: 17 },
-  cardTime: { fontSize: 11, color: '#999' },
+  section: { paddingHorizontal: spacing.lg },
+  searchBar: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.pill, height: 44, paddingHorizontal: spacing.md, marginBottom: spacing.md,
+  },
+  searchInput: { flex: 1, color: colors.text },
+  categoryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, paddingHorizontal: spacing.lg, marginBottom: spacing.md },
+  article: {
+    flexDirection: 'row', gap: spacing.sm, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: colors.border,
+    borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.sm,
+  },
+  iconWrap: { width: 40, height: 40, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
 });
