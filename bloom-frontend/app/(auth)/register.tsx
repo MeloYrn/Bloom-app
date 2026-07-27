@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { userApi } from '../../services/api';
+import { KeyboardAvoidingView, Platform } from 'react-native';
 
 export default function RegisterScreen() {
   const [displayName, setDisplayName] = useState('');
@@ -36,6 +37,10 @@ export default function RegisterScreen() {
   };
 
   return (
+    <KeyboardAvoidingView
+    style={{flex:1}}
+    behavior= {Platform.OS === 'ios' ? 'padding' :undefined }
+    >
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.logo}>🌸</Text>
@@ -84,6 +89,7 @@ export default function RegisterScreen() {
         </TouchableOpacity>
       </View>
     </View>
+    </KeyboardAvoidingView>
   );
 }
 

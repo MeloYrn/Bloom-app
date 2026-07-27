@@ -1,23 +1,96 @@
-import React, { useState } from 'react';
-import { View, Text, FlatList, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, spacing, radius, type } from '../../constants/theme';
-import { Screen } from '../../components/ui/Screen';
-import { ScreenHeader } from '../../components/ui/Card';
-import { Chip } from '../../components/ui/Chip';
-import { EmptyState } from '../../components/ui/PhaseTipCard';
+import { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
+  StyleSheet,
+  KeyboardAvoidingView, 
+  Platform,
+} from 'react-native';
+import { Client } from '@stomp/stompjs';
+// @ts-ignore: no declaration file for sockjs-client
+import SockJS from 'sockjs-client';
+import { communityApi } from '../../services/api';
 
-const CATEGORIES = ['mental-health', 'contraceptives', 'first-timers'];
 
-// TODO: replace with real posts from your API / websocket store.
-const mockPosts = [
-  { id: '1', author: 'JadeZinnia7', category: 'contraceptives', body: 'Does anyone have advice on choosing a contraceptive method for the first time?', hearts: 3 },
-];
+const BASE_WS = 'http://172.20.10.3:8083';
 
-export default function Community() {
-  const [category, setCategory] = useState('contraceptives');
-  const [draft, setDraft] = useState('');
-  const posts = mockPosts.filter((p) => p.category === category);
+const CHANNELS = ['general', 'cramps', 'discharge', 'mental-health', 'contraceptives', 'first-timers'];
+
+type Post = {
+  id: string;
+  pseudonym?: string | null;
+  channel: string;
+  content: string;
+  upvotes: number;
+  createdAt?: string;
+};
+
+export default function CommunityScreen() {
+  const [channel, setChannel] = useState('general');
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [message, setMessage] = useState(''); 
+  const stompClient = useRef<Client | null>(null);
+
+  useEffect(() => {
+    // Load existing posts for this channel
+    communityApi.get(`/api/community/posts/${channel}`)
+      .then((res) => setPosts(res.data))
+      .catch((err) => console.log('Failed to load posts:', err.message));
+
+    // Disconnect previous connection if switching channels
+    if (stompClient.current) {
+      stompClient.current.deactivate();
+    }
+
+    // Connect to WebSocket
+    const client = new Client({
+      webSocketFactory: () => new SockJS(`${BASE_WS}/ws`),
+      reconnectDelay: 5000,
+      onConnect: () => {
+        client.subscribe(`/topic/channel/${channel}`, (msg) => {
+          const newPost = JSON.parse(msg.body);
+          setPosts((prev) => [newPost, ...prev]);
+        });
+      },
+      onStompError: (frame) => {
+        console.log('STOMP error:', frame);
+      },
+    });
+
+    client.activate();
+    stompClient.current = client;
+
+    return () => {
+      client.deactivate();
+    };
+  }, [channel]);
+
+  const sendPost = async () => {
+    if (!message.trim()) return;
+    try {
+      await communityApi.post('/api/community/posts', { channel, content: message });
+      setMessage('');
+    } catch (err) {
+      console.log('Failed to send post:', err);
+    }
+  };
+
+  const upvote = async (postId: string) => {
+    try {
+      await communityApi.post(`/api/community/posts/${postId}/upvote`);
+    } catch (err) {
+      console.log('Failed to upvote:', err);
+    }
+  };
+
+  const getInitials = (name?: string | null) => {
+    const safeName = (name ?? 'Anonymous').trim();
+    if (!safeName) return 'AN';
+    return safeName.substring(0, 2).toUpperCase();
+  };
 
   return (
     <Screen>
@@ -34,36 +107,47 @@ export default function Community() {
           }
         />
 
-        <View style={styles.categoryRow}>
-          {CATEGORIES.map((c) => (
-            <Chip key={c} label={`#${c}`} selected={category === c} color={colors.purple} onPress={() => setCategory(c)} />
-          ))}
-        </View>
+      <FlatList
+        horizontal
+        data={CHANNELS}
+        keyExtractor={(item) => item}
+        style={styles.channelBar}
+        showsHorizontalScrollIndicator={false}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            key={item}
+            style={[styles.channelBtn, channel === item && styles.channelBtnActive]}
+            onPress={() => setChannel(item)}
+          >
+            <Text style={[styles.channelText, channel === item && styles.channelTextActive]}>
+              #{item}
+            </Text>
+          </TouchableOpacity>
+        )}
+      />
 
-        <FlatList
-          data={posts}
-          keyExtractor={(p) => p.id}
-          contentContainerStyle={{ padding: spacing.lg, flexGrow: 1 }}
-          ListEmptyComponent={
-            <EmptyState icon="chatbubble-ellipses-outline" title="Nothing here yet" message={`Be the first to share something in #${category}. It's anonymous.`} />
-          }
-          renderItem={({ item }) => (
-            <View style={styles.post}>
-              <View style={styles.postHeader}>
-                <View style={styles.postAvatar}>
-                  <Text style={styles.postAvatarText}>{item.author.slice(0, 2).toUpperCase()}</Text>
-                </View>
-                <Text style={type.h3}>{item.author}</Text>
+      <FlatList
+        data={posts}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={{ padding: 16 }}
+        ListEmptyComponent={
+          <View style={{ padding: 40, alignItems: 'center' }}>
+            <Text style={{ fontSize: 40, marginBottom: 10 }}>💬</Text>
+            <Text style={{ color: '#999', textAlign: 'center' }}>
+              No posts yet in this channel.{'\n'}Be the first to share!
+            </Text>
+          </View>
+        }
+        renderItem={({ item }) => (
+          <View key={item.id} style={styles.postCard}>
+            <View style={styles.postMeta}>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{getInitials(item.pseudonym)}</Text>
               </View>
-              <Text style={[type.body, { marginTop: spacing.xs }]}>{item.body}</Text>
-              <View style={styles.postFooter}>
-                <View style={styles.postAction}>
-                  <Ionicons name="heart-outline" size={16} color={colors.pink} />
-                  <Text style={type.bodyMuted}>{item.hearts}</Text>
-                </View>
-                <View style={styles.postAction}>
-                  <Ionicons name="flag-outline" size={16} color={colors.textMuted} />
-                  <Text style={type.bodyMuted}>Report</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.pseudonym}>{item.pseudonym || 'Anonymous'}</Text>
+                <View style={styles.channelTag}>
+                  <Text style={styles.channelTagText}>#{item.channel}</Text>
                 </View>
               </View>
             </View>

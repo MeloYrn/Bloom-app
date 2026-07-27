@@ -1,67 +1,159 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { Calendar } from 'react-native-calendars';
-import { colors, spacing, radius, type, phaseMeta } from '../../constants/theme';
-import { Screen } from '../../components/ui/Screen';
-import { ScreenHeader, Card } from '../../components/ui/Card';
-import { Chip } from '../../components/ui/Chip';
-import { Button } from '../../components/ui/Button';
-import { MoodFace } from '../../components/ui/MoodFace';
+import { trackingApi } from '../../services/api';
+import {RefreshControl } from 'react-native';
 
-const FLOW_LEVELS = ['None', 'Light', 'Medium', 'Heavy'];
-const SYMPTOMS = ['Cramps', 'Fatigue', 'Headache', 'Bloating', 'Mood swings', 'Hot flashes'];
-const MOOD_LEVELS = [0, 1, 2, 3, 4] as const;
 
-// TODO: replace with real marked dates computed from the user's logged cycles.
-const markedDates: Record<string, any> = {
-  '2026-06-25': { color: colors.period, textColor: '#fff' },
-  '2026-06-26': { color: colors.period, textColor: '#fff' },
-  '2026-06-27': { color: colors.predicted, textColor: colors.text },
-  '2026-06-14': { color: colors.fertile, textColor: '#fff' },
-  '2026-06-15': { color: colors.fertile, textColor: '#fff' },
-};
+const FLOW_OPTIONS = [
+  { label: 'Light', value: 'light', color: '#FFCDD2' },
+  { label: 'Medium', value: 'medium', color: '#EF9A9A' },
+  { label: 'Heavy', value: 'heavy', color: '#E57373' },
+  { label: 'Spotting', value: 'spotting', color: '#FFCCBC' },
+];
 
-export default function Track() {
-  const [flow, setFlow] = useState('Light');
-  const [symptoms, setSymptoms] = useState<string[]>([]);
+const SYMPTOM_OPTIONS = [
+  { key: 'cramps', label: 'Cramps', emoji: '😣' },
+  { key: 'fatigue', label: 'Fatigue', emoji: '😴' },
+  { key: 'headache', label: 'Headache', emoji: '🤕' },
+  { key: 'bloating', label: 'Bloating', emoji: '😟' },
+  { key: 'moodSwings', label: 'Mood Swings', emoji: '😠' },
+  { key: 'hotFlashes', label: 'Hot Flashes', emoji: '🔥' },
+];
+
+const MOOD_OPTIONS = ['😢', '😕', '😐', '🙂', '😄'];
+
+export default function TrackScreen() {
+  const [startDate, setStartDate] = useState(new Date());
+  const [flow, setFlow] = useState('medium');
+  const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [mood, setMood] = useState(2);
+  const [saving, setSaving] = useState(false);
+  const [markedDates, setMarkedDates] = useState<any>({});
+  const [ovulationDay, setOvulationDay] = useState<string | null>(null);
+  const [symptomHistory, setSymptomHistory] = useState<any[]>([]);
+  const [predictedNext, setPredictedNext] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    loadHistory();
+  }, []);
+
+  const loadHistory = async () => {
+    try {
+      const historyRes = await trackingApi.get('/api/cycles/history');
+      const predictRes = await trackingApi.get('/api/cycles/predict');
+
+      const marks: any = {};
+
+      historyRes.data.forEach((log: any) => {
+        marks[log.startDate] = {
+          selected: true,
+          selectedColor: '#C2185B',
+
+          
+        };
+      });
+
+      if (predictRes.data.fertileWindowStart && predictRes.data.fertileWindowEnd) {
+        let current = new Date(predictRes.data.fertileWindowStart);
+        const end = new Date(predictRes.data.fertileWindowEnd);
+        while (current <= end) {
+          const dateStr = current.toISOString().split('T')[0];
+          if (!marks[dateStr]) {
+            marks[dateStr] = { selected: true, selectedColor: '#A5D6A7' };
+          }
+          current.setDate(current.getDate() + 1);
+        }
+      }
+
+      if (predictRes.data.fertileWindowEnd) {
+        setOvulationDay(predictRes.data.fertileWindowEnd);
+        marks[predictRes.data.fertileWindowEnd] = { selected: true, selectedColor: '#CE93D8' };
+      }
+
+      if (predictRes.data.nextPeriod) {
+        marks[predictRes.data.nextPeriod] = {
+          selected: true,
+          selectedColor: '#F8BBD0',
+        };
+        setPredictedNext(predictRes.data.nextPeriod);
+      }
+
+      setMarkedDates(marks);
+
+      try {
+        const symptomsRes = await trackingApi.get('/api/symptoms/history');
+        setSymptomHistory(symptomsRes.data);
+      } catch (err) {
+        console.log('Failed to load symptom history:', err);
+      }
+    } catch (err) {
+      console.log('Failed to load history:', err);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadHistory();
+    setRefreshing(false);
+  };
+
+  const toggleSymptom = (key: string) => {
+    setSelectedSymptoms((prev) =>
+      prev.includes(key) ? prev.filter((s) => s !== key) : [...prev, key]
+    );
+  };
+
+  const saveCycle = async () => {
+    setSaving(true);
+    try {
+      await trackingApi.post('/api/cycles/log', {
+        startDate: startDate.toISOString().split('T')[0],
+        flowLevel: flow,
+      });
 
   const toggleSymptom = (s: string) =>
     setSymptoms((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
 
   return (
-    <Screen>
-      <ScrollView contentContainerStyle={{ paddingBottom: spacing.xxl }}>
-        <ScreenHeader title="Track" subtitle="Your cycle and patterns" accentColor={colors.pink} />
+    <ScrollView
+      style={styles.container}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#C2185B" />
+    }
+    >
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Period Tracker</Text>
+        <Text style={styles.headerSub}>Track your cycle and patterns</Text>
+      </View>
 
-        <View style={styles.section}>
-          <Card style={{ padding: spacing.sm }}>
-            <Calendar
-              current="2026-06-29"
-              markingType="period"
-              markedDates={markedDates}
-              theme={{
-                backgroundColor: 'transparent',
-                calendarBackground: 'transparent',
-                textSectionTitleColor: colors.textMuted,
-                selectedDayBackgroundColor: colors.pink,
-                todayTextColor: colors.pink,
-                dayTextColor: colors.text,
-                textDisabledColor: colors.textFaint,
-                arrowColor: colors.pink,
-                monthTextColor: colors.text,
-                textMonthFontWeight: '700',
-                textDayFontWeight: '500',
-                textDayHeaderFontWeight: '600',
-              }}
-            />
-            <View style={styles.legendRow}>
-              {(['period', 'fertile', 'predicted'] as const).map((key) => (
-                <View key={key} style={styles.legendItem}>
-                  <View style={[styles.dot, { backgroundColor: phaseMeta[key].color }]} />
-                  <Text style={type.bodyMuted}>{phaseMeta[key].label}</Text>
-                </View>
-              ))}
+      <View style={styles.body}>
+        {/* Calendar */}
+        <View style={styles.calendarCard}>
+          <Calendar
+            markedDates={markedDates}
+            theme={{
+              selectedDayBackgroundColor: '#C2185B',
+              todayTextColor: '#C2185B',
+              arrowColor: '#C2185B',
+            }}
+          />
+          <View style={styles.legend}>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: '#C2185B' }]} />
+              <Text style={styles.legendText}>Period</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: '#A5D6A7' }]} />
+              <Text style={styles.legendText}>Fertile</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: '#F8BBD0' }]} />
+              <Text style={styles.legendText}>Predicted</Text>
+            </View>
+            <View style={styles.legendItem}>
+             <View style={[styles.legendDot, { backgroundColor: '#CE93D8' }]} />
+             <Text style={styles.legendText}>Ovulation</Text>
             </View>
           </Card>
         </View>
@@ -70,12 +162,31 @@ export default function Track() {
           <Card>
             <Text style={type.h2}>Log today's period</Text>
 
-            <Text style={[type.label, styles.fieldLabel]}>FLOW LEVEL</Text>
-            <View style={styles.chipRow}>
-              {FLOW_LEVELS.map((f) => (
-                <Chip key={f} label={f} selected={flow === f} color={colors.pink} onPress={() => setFlow(f)} />
-              ))}
-            </View>
+          <Text style={styles.label}>Date</Text>
+          <DateTimePicker
+            value={startDate}
+            mode="date"
+            display="default"        
+            onChange={(_event: any, date?: Date | null) => {
+              if (date) {
+                setStartDate(date);
+              }
+            }}
+          />
+
+          <Text style={styles.label}>Flow Level</Text>
+          <View style={styles.flowRow}>
+            {FLOW_OPTIONS.map((opt) => (
+              <TouchableOpacity
+                key={opt.value}
+                style={[styles.flowChip, flow === opt.value && styles.flowChipSelected]}
+                onPress={() => setFlow(opt.value)}
+              >
+                <View style={[styles.flowDot, { backgroundColor: opt.color }]} />
+                <Text style={styles.flowLabel}>{opt.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
             <Text style={[type.label, styles.fieldLabel]}>SYMPTOMS</Text>
             <View style={styles.chipRow}>

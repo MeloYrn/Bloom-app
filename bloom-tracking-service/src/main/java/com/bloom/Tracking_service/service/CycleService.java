@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -58,5 +59,29 @@ public class CycleService {
         result.put("fertileWindowEnd", fertileEnd.toString());
         result.put("averageCycleLength", avgCycleLength + " days");
         return result;
+    }
+
+    /**
+     * Returns the IDs of users whose predicted next period falls within
+     * the given number of days from today. Used by the notification
+     * service's daily reminder job.
+     */
+    public List<UUID> getUsersWithUpcomingPeriod(int withinDays) {
+        List<UUID> dueUsers = new ArrayList<>();
+        LocalDate today = LocalDate.now();
+
+        for (UUID userId : cycleRepo.findDistinctUserIds()) {
+            Map<String, String> prediction = predict(userId);
+            String nextPeriodStr = prediction.get("nextPeriod");
+            if (nextPeriodStr == null) continue; // not enough data yet
+
+            LocalDate nextPeriod = LocalDate.parse(nextPeriodStr);
+            long daysUntil = ChronoUnit.DAYS.between(today, nextPeriod);
+
+            if (daysUntil >= 0 && daysUntil <= withinDays) {
+                dueUsers.add(userId);
+            }
+        }
+        return dueUsers;
     }
 }

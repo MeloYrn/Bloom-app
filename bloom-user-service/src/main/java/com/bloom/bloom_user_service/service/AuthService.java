@@ -26,6 +26,8 @@ public class AuthService {
         user.setEmail(req.getEmail());
         user.setPasswordHash(encoder.encode(req.getPassword()));
         user.setDisplayName(req.getDisplayName());
+        user.setUsername(req.getUsername()); // may be null - that's fine
+        user.setDateOfBirth(req.getDateOfBirth()); // may be null - that's fine
         userRepository.save(user);
         String token = generateToken(user.getId().toString());
         return new AuthResponse(token, user.getDisplayName(), user.getId().toString());
