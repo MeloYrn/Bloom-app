@@ -22,16 +22,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: async (token, userId, displayName) => {
     await SecureStore.setItemAsync('token', token);
     await SecureStore.setItemAsync('user_id', userId);
+    await SecureStore.setItemAsync('display_name', displayName);
     set({ token, userId, displayName, isLoggedIn: true, isHydrated: true });
   },
 
-  set({
-    token: String(token),
-    userId: String(userId),
-    displayName: String(displayName),
-    isLoggedIn: true,
-  });
-},
   logout: async () => {
     await SecureStore.deleteItemAsync('token');
     await SecureStore.deleteItemAsync('user_id');

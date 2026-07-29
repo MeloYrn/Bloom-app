@@ -2,7 +2,7 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { useAuthStore } from '../store/auth.store';
 
-const BASE_URL = 'http://172.20.10.5';
+const BASE_URL = 'http://172.20.10.3'; 
 
 const getCurrentUserId = async () => {
   const storeUserId = useAuthStore.getState().userId;

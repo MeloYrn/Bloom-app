@@ -5,140 +5,133 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { Screen } from '../../components/ui/Screen';
+import { Button } from '../../components/ui/Button';
 import { useAuthStore } from '../../store/auth.store';
 import { userApi } from '../../services/api';
-import { KeyboardAvoidingView, Platform} from 'react-native';
+import { colors, spacing, radius, type } from '../../constants/theme';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { login } = useAuthStore();
   const router = useRouter();
 
- const handleLogin = async () => {
-  if (!email || !password) {
-    Alert.alert("Error", "Please fill in all fields");
-    return;
-  }
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
 
-  setLoading(true);
+    setLoading(true);
 
-  try {
-    const response = await userApi.post("/api/auth/login", {
-      email,
-      password,
-    });
+    try {
+      const response = await userApi.post('/api/auth/login', { email, password });
+      const { token, userId, displayName } = response.data;
 
-    const { token, userId, displayName } = response.data;
+      await login(token, userId, displayName);
+      router.replace('/(tabs)');
+    } catch (error: any) {
+      console.log('STATUS:', error?.response?.status);
+      console.log('DATA:', error?.response?.data);
+      console.log('ERROR:', error?.message);
 
-    await login(token, userId, displayName);
-    router.replace("/(tabs)");
-    
-  } catch (error: any) {
-    console.log("STATUS:", error?.response?.status);
-    console.log("DATA:", error?.response?.data);
-    console.log("ERROR:", error?.message);
-
-    Alert.alert(
-      "Login Failed",
-      JSON.stringify(error?.response?.data ?? error?.message)
-    );
-  } finally {
-    setLoading(false);
-  }
-};
+      Alert.alert('Login Failed', JSON.stringify(error?.response?.data ?? error?.message));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <KeyboardAvoidingView
-    style={{flex:1}}
-    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    > 
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.logo}>🌸</Text>
-        <Text style={styles.title}>Welcome back</Text>
-        <Text style={styles.subtitle}>Sign in to continue your health journey</Text>
-      </View>
-      
-      
-      <View style={styles.body}>
-        <Text style={styles.label}>Email Address</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="you@example.com"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
+    <Screen edges={['top', 'bottom']}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={styles.header}>
+          <View style={styles.logoWrap}>
+            <Ionicons name="flower-outline" size={30} color={colors.pink} />
+          </View>
+          <Text style={[type.display, { marginTop: spacing.md }]}>Welcome back</Text>
+          <Text style={[type.bodyMuted, { marginTop: 4 }]}>Sign in to continue your health journey</Text>
+        </View>
 
-        <Text style={styles.label}>Password</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="••••••••"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
+        <View style={styles.body}>
+          <Text style={[type.label, styles.fieldLabel]}>EMAIL ADDRESS</Text>
+          <View style={styles.inputWrap}>
+            <Ionicons name="mail-outline" size={18} color={colors.textFaint} />
+            <TextInput
+              style={styles.input}
+              placeholder="you@example.com"
+              placeholderTextColor={colors.textFaint}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
 
-        <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Sign In</Text>
-          )}
-        </TouchableOpacity>
+          <Text style={[type.label, styles.fieldLabel]}>PASSWORD</Text>
+          <View style={styles.inputWrap}>
+            <Ionicons name="lock-closed-outline" size={18} color={colors.textFaint} />
+            <TextInput
+              style={styles.input}
+              placeholder="••••••••"
+              placeholderTextColor={colors.textFaint}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity onPress={() => setShowPassword((v) => !v)} hitSlop={8}>
+              <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color={colors.textFaint} />
+            </TouchableOpacity>
+          </View>
 
-        <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
-          <Text style={styles.link}>Don't have an account? Register</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-    </KeyboardAvoidingView>
-  
+          <Button
+            label="Sign In"
+            onPress={handleLogin}
+            loading={loading}
+            disabled={loading}
+            style={{ marginTop: spacing.xl }}
+          />
+
+          <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
+            <Text style={styles.link}>Don't have an account? Register</Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  header: {
-    backgroundColor: '#C2185B',
-    padding: 28,
-    paddingTop: 60,
-  },
-  logo: { fontSize: 36, marginBottom: 8 },
-  title: { fontSize: 26, fontWeight: 'bold', color: '#fff', marginBottom: 4 },
-  subtitle: { fontSize: 14, color: '#FCE4EC' },
-  body: { flex: 1, padding: 24 },
-  label: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#777',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 6,
-    marginTop: 16,
-  },
-  input: {
-    borderWidth: 2,
-    borderColor: '#F0E6EE',
-    borderRadius: 14,
-    padding: 14,
-    fontSize: 15,
-    backgroundColor: '#FFF8F0',
-  },
-  button: {
-    backgroundColor: '#C2185B',
-    borderRadius: 16,
-    padding: 16,
+  header: { paddingHorizontal: spacing.lg, paddingTop: spacing.xl, alignItems: 'flex-start' },
+  logoWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(255,111,160,0.16)',
     alignItems: 'center',
-    marginTop: 24,
+    justifyContent: 'center',
   },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-  link: { textAlign: 'center', color: '#C2185B', marginTop: 20, fontSize: 14, fontWeight: '600' },
+  body: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.lg },
+  fieldLabel: { marginTop: spacing.md, marginBottom: spacing.sm },
+  inputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.surface,
+    height: 50,
+  },
+  input: { flex: 1, fontSize: 15, color: colors.text },
+  link: { textAlign: 'center', color: colors.pink, marginTop: spacing.lg, fontSize: 14, fontWeight: '600' },
 });

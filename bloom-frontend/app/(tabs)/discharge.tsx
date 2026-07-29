@@ -1,26 +1,30 @@
 import { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { Screen } from '../../components/ui/Screen';
+import { colors, spacing, radius, type, shadow } from '../../constants/theme';
 
 const TOTAL_STEPS = 3;
 
+
 const COLOR_OPTIONS = [
-  { label: 'Clear', emoji: '⚪' },
-  { label: 'White / Cream', emoji: '🤍' },
-  { label: 'Yellow / Green', emoji: '🟡' },
-  { label: 'Brown / Pink', emoji: '🟤' },
+  { label: 'Clear', swatch: 'rgba(255,255,255,0.15)', border: colors.border },
+  { label: 'White / Cream', swatch: '#F5F0E6', border: colors.border },
+  { label: 'Yellow / Green', swatch: '#C9D64F', border: '#C9D64F' },
+  { label: 'Brown / Pink', swatch: '#B5716B', border: '#B5716B' },
 ];
 
-const CONSISTENCY_OPTIONS = [
-  { label: 'Watery', emoji: '💧' },
-  { label: 'Creamy', emoji: '🥛' },
-  { label: 'Stretchy', emoji: '🧴' },
-  { label: 'Thick / Chunky', emoji: '❄️' },
+const CONSISTENCY_OPTIONS: { label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
+  { label: 'Watery', icon: 'water-outline' },
+  { label: 'Creamy', icon: 'ice-cream-outline' },
+  { label: 'Stretchy', icon: 'resize-outline' },
+  { label: 'Thick / Chunky', icon: 'snow-outline' },
 ];
 
-const ODOR_OPTIONS = [
-  { label: 'None / Mild', emoji: '✅' },
-  { label: 'Strong / Unusual', emoji: '⚠️' },
-  { label: 'Fishy', emoji: '🚨' },
+const ODOR_OPTIONS: { label: string; icon: React.ComponentProps<typeof Ionicons>['name']; tint: string }[] = [
+  { label: 'None / Mild', icon: 'checkmark-circle-outline', tint: colors.success },
+  { label: 'Strong / Unusual', icon: 'warning-outline', tint: colors.gold },
+  { label: 'Fishy', icon: 'alert-circle-outline', tint: colors.danger },
 ];
 
 export default function DischargeScreen() {
@@ -44,23 +48,24 @@ export default function DischargeScreen() {
     if (answers.includes('Fishy')) {
       return {
         status: 'See a Doctor',
-        color: '#DC2626',
-        emoji: '🚨',
-        message: 'Your answers suggest discharge that may need medical attention. A fishy odor can be a sign of an infection that is easily treated. Please see a healthcare provider soon.',
+        color: colors.danger,
+        icon: 'alert-circle' as const,
+        message:
+          'Your answers suggest discharge that may need medical attention. A fishy odor can be a sign of an infection that is easily treated. Please see a healthcare provider soon.',
       };
     }
     if (hasConcerning) {
       return {
         status: 'Worth Monitoring',
-        color: '#F59E0B',
-        emoji: '⚠️',
+        color: colors.gold,
+        icon: 'warning' as const,
         message: 'Some of your answers may indicate a change worth paying attention to. This is not a diagnosis. See a healthcare provider if symptoms persist.',
       };
     }
     return {
       status: 'Likely Normal',
-      color: '#059669',
-      emoji: '✅',
+      color: colors.success,
+      icon: 'checkmark-circle' as const,
       message: 'Your answers suggest this discharge is typical and healthy. If something still feels off, trust your body and see a healthcare provider.',
     };
   };
@@ -71,93 +76,139 @@ export default function DischargeScreen() {
   };
 
   return (
-    <View style={{ flex: 1 }}>
+    <Screen>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Discharge Check</Text>
-        <Text style={styles.headerSub}>Private, judgment-free guidance</Text>
+        <Text style={type.display}>Discharge Check</Text>
+        <Text style={[type.bodyMuted, { marginTop: 2 }]}>Private, judgment-free guidance</Text>
         <View style={styles.progressTrack}>
           <View style={[styles.progressFill, { width: `${(Math.min(step, TOTAL_STEPS) / TOTAL_STEPS) * 100}%` }]} />
         </View>
-        <Text style={styles.progressLabel}>
+        <Text style={[type.caption, { marginTop: 6 }]}>
           {step <= TOTAL_STEPS ? `Step ${step} of ${TOTAL_STEPS}` : 'Complete'}
         </Text>
       </View>
 
       {step === 1 && (
-        <ScrollView style={styles.body}>
-          <Text style={styles.question}>What color is the discharge?</Text>
-          <Text style={styles.hint}>Select the option that best describes what you see</Text>
+        <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: spacing.xxl }}>
+          <Text style={type.h1}>What color is the discharge?</Text>
+          <Text style={[type.bodyMuted, { marginTop: 6, marginBottom: spacing.lg }]}>
+            Select the option that best describes what you see
+          </Text>
           {COLOR_OPTIONS.map((opt) => (
             <TouchableOpacity key={opt.label} style={styles.option} onPress={() => handleAnswer(opt.label)}>
-              <Text style={styles.optionEmoji}>{opt.emoji}</Text>
+              <View style={[styles.swatch, { backgroundColor: opt.swatch, borderColor: opt.border }]} />
               <Text style={styles.optionLabel}>{opt.label}</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
             </TouchableOpacity>
           ))}
         </ScrollView>
       )}
 
       {step === 2 && (
-        <ScrollView style={styles.body}>
-          <Text style={styles.question}>How would you describe the consistency?</Text>
-          <Text style={styles.hint}>Choose the closest description</Text>
+        <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: spacing.xxl }}>
+          <Text style={type.h1}>How would you describe the consistency?</Text>
+          <Text style={[type.bodyMuted, { marginTop: 6, marginBottom: spacing.lg }]}>Choose the closest description</Text>
           {CONSISTENCY_OPTIONS.map((opt) => (
             <TouchableOpacity key={opt.label} style={styles.option} onPress={() => handleAnswer(opt.label)}>
-              <Text style={styles.optionEmoji}>{opt.emoji}</Text>
+              <View style={styles.iconWrap}>
+                <Ionicons name={opt.icon} size={20} color={colors.purple} />
+              </View>
               <Text style={styles.optionLabel}>{opt.label}</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
             </TouchableOpacity>
           ))}
         </ScrollView>
       )}
 
       {step === 3 && (
-        <ScrollView style={styles.body}>
-          <Text style={styles.question}>Is there any unusual odor?</Text>
-          <Text style={styles.hint}>Be as honest as you can — this is completely private</Text>
+        <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: spacing.xxl }}>
+          <Text style={type.h1}>Is there any unusual odor?</Text>
+          <Text style={[type.bodyMuted, { marginTop: 6, marginBottom: spacing.lg }]}>
+            Be as honest as you can — this is completely private
+          </Text>
           {ODOR_OPTIONS.map((opt) => (
             <TouchableOpacity key={opt.label} style={styles.option} onPress={() => handleAnswer(opt.label)}>
-              <Text style={styles.optionEmoji}>{opt.emoji}</Text>
+              <View style={[styles.iconWrap, { backgroundColor: opt.tint + '2E' }]}>
+                <Ionicons name={opt.icon} size={20} color={opt.tint} />
+              </View>
               <Text style={styles.optionLabel}>{opt.label}</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
             </TouchableOpacity>
           ))}
         </ScrollView>
       )}
 
-      {step === 4 && (() => {
-        const result = getResult();
-        return (
-          <View style={[styles.resultBox, { borderColor: result.color }]}>
-            <Text style={styles.resultEmoji}>{result.emoji}</Text>
-            <Text style={[styles.resultStatus, { color: result.color }]}>{result.status}</Text>
-            <Text style={styles.resultMessage}>{result.message}</Text>
-            <TouchableOpacity style={styles.resetBtn} onPress={reset}>
-              <Text style={styles.resetText}>Start Again</Text>
-            </TouchableOpacity>
-          </View>
-        );
-      })()}
-    </View>
+      {step === 4 &&
+        (() => {
+          const result = getResult();
+          return (
+            <View style={[styles.resultBox, { borderColor: result.color }]}>
+              <View style={[styles.resultIconWrap, { backgroundColor: result.color + '26' }]}>
+                <Ionicons name={result.icon} size={40} color={result.color} />
+              </View>
+              <Text style={[styles.resultStatus, { color: result.color }]}>{result.status}</Text>
+              <Text style={styles.resultMessage}>{result.message}</Text>
+              <TouchableOpacity style={styles.resetBtn} onPress={reset}>
+                <Text style={styles.resetText}>Start Again</Text>
+              </TouchableOpacity>
+            </View>
+          );
+        })()}
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { backgroundColor: '#00695C', padding: 24, paddingTop: 50 },
-  headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#fff' },
-  headerSub: { fontSize: 13, color: '#B2DFDB', marginTop: 4 },
-  progressTrack: { backgroundColor: 'rgba(255,255,255,0.25)', height: 6, borderRadius: 4, marginTop: 16 },
-  progressFill: { backgroundColor: '#fff', height: 6, borderRadius: 4 },
-  progressLabel: { fontSize: 12, color: '#B2DFDB', marginTop: 4 },
-  body: { flex: 1, padding: 20, backgroundColor: '#fff' },
-  question: { fontSize: 20, fontWeight: 'bold', color: '#1A1A1A', marginBottom: 6 },
-  hint: { fontSize: 13, color: '#777', marginBottom: 20 },
-  option: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff',
-            borderWidth: 2, borderColor: '#E0E0E0', borderRadius: 16, padding: 16, marginBottom: 10 },
-  optionEmoji: { fontSize: 24, marginRight: 14 },
-  optionLabel: { fontSize: 15, fontWeight: '600', color: '#1A1A1A' },
-  resultBox: { flex: 1, margin: 20, padding: 24, borderRadius: 20, borderWidth: 3,
-               alignItems: 'center', justifyContent: 'center' },
-  resultEmoji: { fontSize: 48, marginBottom: 12 },
-  resultStatus: { fontSize: 22, fontWeight: 'bold', marginBottom: 12 },
-  resultMessage: { fontSize: 14, color: '#555', lineHeight: 21, textAlign: 'center', marginBottom: 24 },
-  resetBtn: { backgroundColor: '#00695C', paddingVertical: 14, paddingHorizontal: 32, borderRadius: 12 },
-  resetText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
+  header: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.md },
+  progressTrack: { backgroundColor: colors.surface, height: 6, borderRadius: radius.sm, marginTop: spacing.md },
+  progressFill: { backgroundColor: colors.fertile, height: 6, borderRadius: radius.sm },
+  body: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.md },
+  option: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  swatch: { width: 28, height: 28, borderRadius: radius.pill, borderWidth: 1.5 },
+  iconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.sm,
+    backgroundColor: 'rgba(138,92,246,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  optionLabel: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.text },
+  resultBox: {
+    flex: 1,
+    margin: spacing.lg,
+    padding: spacing.xl,
+    borderRadius: radius.lg,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+  },
+  resultIconWrap: {
+    width: 76,
+    height: 76,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  resultStatus: { fontSize: 22, fontWeight: '700', marginBottom: spacing.md },
+  resultMessage: { fontSize: 14, color: colors.textMuted, lineHeight: 21, textAlign: 'center', marginBottom: spacing.xl },
+  resetBtn: {
+    backgroundColor: colors.pink,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    borderRadius: radius.md,
+  },
+  resetText: { color: '#fff', fontWeight: '700', fontSize: 15 },
 });

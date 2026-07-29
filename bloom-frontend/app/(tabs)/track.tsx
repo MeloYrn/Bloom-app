@@ -1,36 +1,38 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, Pressable, StyleSheet, RefreshControl } from 'react-native';
 import { Calendar } from 'react-native-calendars';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Screen } from '../../components/ui/Screen';
+import { Card, ScreenHeader } from '../../components/ui/Card';
+import { Chip } from '../../components/ui/Chip';
+import { Button } from '../../components/ui/Button';
+import { MoodFace } from '../../components/ui/MoodFace';
+import { colors, spacing, radius, type, phaseMeta } from '../../constants/theme';
 import { trackingApi } from '../../services/api';
-import {RefreshControl } from 'react-native';
-
 
 const FLOW_OPTIONS = [
-  { label: 'Light', value: 'light', color: '#FFCDD2' },
-  { label: 'Medium', value: 'medium', color: '#EF9A9A' },
-  { label: 'Heavy', value: 'heavy', color: '#E57373' },
-  { label: 'Spotting', value: 'spotting', color: '#FFCCBC' },
+  { label: 'Light', value: 'light' },
+  { label: 'Medium', value: 'medium' },
+  { label: 'Heavy', value: 'heavy' },
+  { label: 'Spotting', value: 'spotting' },
 ];
 
 const SYMPTOM_OPTIONS = [
-  { key: 'cramps', label: 'Cramps', emoji: '😣' },
-  { key: 'fatigue', label: 'Fatigue', emoji: '😴' },
-  { key: 'headache', label: 'Headache', emoji: '🤕' },
-  { key: 'bloating', label: 'Bloating', emoji: '😟' },
-  { key: 'moodSwings', label: 'Mood Swings', emoji: '😠' },
-  { key: 'hotFlashes', label: 'Hot Flashes', emoji: '🔥' },
+  { key: 'cramps', label: 'Cramps' },
+  { key: 'fatigue', label: 'Fatigue' },
+  { key: 'headache', label: 'Headache' },
+  { key: 'bloating', label: 'Bloating' },
+  { key: 'moodSwings', label: 'Mood Swings' },
+  { key: 'hotFlashes', label: 'Hot Flashes' },
 ];
 
-const MOOD_OPTIONS = ['😢', '😕', '😐', '🙂', '😄'];
-
 export default function TrackScreen() {
-  const [startDate, setStartDate] = useState(new Date());
+  const [startDate, setStartDate] = useState<Date>(new Date());
   const [flow, setFlow] = useState('medium');
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
-  const [mood, setMood] = useState(2);
+  const [mood, setMood] = useState<0 | 1 | 2 | 3 | 4>(2);
   const [saving, setSaving] = useState(false);
   const [markedDates, setMarkedDates] = useState<any>({});
-  const [ovulationDay, setOvulationDay] = useState<string | null>(null);
   const [symptomHistory, setSymptomHistory] = useState<any[]>([]);
   const [predictedNext, setPredictedNext] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -47,12 +49,7 @@ export default function TrackScreen() {
       const marks: any = {};
 
       historyRes.data.forEach((log: any) => {
-        marks[log.startDate] = {
-          selected: true,
-          selectedColor: '#C2185B',
-
-          
-        };
+        marks[log.startDate] = { selected: true, selectedColor: phaseMeta.period.color };
       });
 
       if (predictRes.data.fertileWindowStart && predictRes.data.fertileWindowEnd) {
@@ -61,22 +58,18 @@ export default function TrackScreen() {
         while (current <= end) {
           const dateStr = current.toISOString().split('T')[0];
           if (!marks[dateStr]) {
-            marks[dateStr] = { selected: true, selectedColor: '#A5D6A7' };
+            marks[dateStr] = { selected: true, selectedColor: phaseMeta.fertile.color };
           }
           current.setDate(current.getDate() + 1);
         }
       }
 
       if (predictRes.data.fertileWindowEnd) {
-        setOvulationDay(predictRes.data.fertileWindowEnd);
-        marks[predictRes.data.fertileWindowEnd] = { selected: true, selectedColor: '#CE93D8' };
+        marks[predictRes.data.fertileWindowEnd] = { selected: true, selectedColor: phaseMeta.ovulation.color };
       }
 
       if (predictRes.data.nextPeriod) {
-        marks[predictRes.data.nextPeriod] = {
-          selected: true,
-          selectedColor: '#F8BBD0',
-        };
+        marks[predictRes.data.nextPeriod] = { selected: true, selectedColor: phaseMeta.predicted.color };
         setPredictedNext(predictRes.data.nextPeriod);
       }
 
@@ -113,47 +106,63 @@ export default function TrackScreen() {
         flowLevel: flow,
       });
 
-  const toggleSymptom = (s: string) =>
-    setSymptoms((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
+      if (selectedSymptoms.length > 0) {
+        await trackingApi.post('/api/symptoms/log', {
+          date: startDate.toISOString().split('T')[0],
+          symptoms: selectedSymptoms,
+          mood,
+        });
+      }
+
+      setSelectedSymptoms([]);
+      await loadHistory();
+    } catch (err) {
+      console.log('Failed to save cycle:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#C2185B" />
-    }
-    >
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Period Tracker</Text>
-        <Text style={styles.headerSub}>Track your cycle and patterns</Text>
-      </View>
+    <Screen>
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: spacing.xxl }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.pink} />}
+      >
+        <ScreenHeader title="Period Tracker" subtitle="Track your cycle and patterns" accentColor={colors.pink} />
 
-      <View style={styles.body}>
-        {/* Calendar */}
-        <View style={styles.calendarCard}>
-          <Calendar
-            markedDates={markedDates}
-            theme={{
-              selectedDayBackgroundColor: '#C2185B',
-              todayTextColor: '#C2185B',
-              arrowColor: '#C2185B',
-            }}
-          />
-          <View style={styles.legend}>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: '#C2185B' }]} />
-              <Text style={styles.legendText}>Period</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: '#A5D6A7' }]} />
-              <Text style={styles.legendText}>Fertile</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: '#F8BBD0' }]} />
-              <Text style={styles.legendText}>Predicted</Text>
-            </View>
-            <View style={styles.legendItem}>
-             <View style={[styles.legendDot, { backgroundColor: '#CE93D8' }]} />
-             <Text style={styles.legendText}>Ovulation</Text>
+        <View style={styles.section}>
+          <Card>
+            <Calendar
+              markedDates={markedDates}
+              theme={{
+                calendarBackground: 'transparent',
+                dayTextColor: colors.text,
+                monthTextColor: colors.text,
+                textDisabledColor: colors.textFaint,
+                selectedDayBackgroundColor: colors.pink,
+                todayTextColor: colors.pink,
+                arrowColor: colors.pink,
+              }}
+              style={{ backgroundColor: 'transparent' }}
+            />
+            <View style={styles.legendRow}>
+              <View style={styles.legendItem}>
+                <View style={[styles.dot, { backgroundColor: phaseMeta.period.color }]} />
+                <Text style={type.caption}>Period</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.dot, { backgroundColor: phaseMeta.fertile.color }]} />
+                <Text style={type.caption}>Fertile</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.dot, { backgroundColor: phaseMeta.predicted.color }]} />
+                <Text style={type.caption}>Predicted</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.dot, { backgroundColor: phaseMeta.ovulation.color }]} />
+                <Text style={type.caption}>Ovulation</Text>
+              </View>
             </View>
           </Card>
         </View>
@@ -162,42 +171,45 @@ export default function TrackScreen() {
           <Card>
             <Text style={type.h2}>Log today's period</Text>
 
-          <Text style={styles.label}>Date</Text>
-          <DateTimePicker
-            value={startDate}
-            mode="date"
-            display="default"        
-            onChange={(_event: any, date?: Date | null) => {
-              if (date) {
-                setStartDate(date);
-              }
-            }}
-          />
+            <Text style={[type.label, styles.fieldLabel]}>DATE</Text>
+            <DateTimePicker
+              value={startDate}
+              mode="date"
+              display="default"
+              onChange={(_event: any, date?: Date) => {
+                if (date) setStartDate(date);
+              }}
+            />
 
-          <Text style={styles.label}>Flow Level</Text>
-          <View style={styles.flowRow}>
-            {FLOW_OPTIONS.map((opt) => (
-              <TouchableOpacity
-                key={opt.value}
-                style={[styles.flowChip, flow === opt.value && styles.flowChipSelected]}
-                onPress={() => setFlow(opt.value)}
-              >
-                <View style={[styles.flowDot, { backgroundColor: opt.color }]} />
-                <Text style={styles.flowLabel}>{opt.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+            <Text style={[type.label, styles.fieldLabel]}>FLOW LEVEL</Text>
+            <View style={styles.chipRow}>
+              {FLOW_OPTIONS.map((opt) => (
+                <Chip
+                  key={opt.value}
+                  label={opt.label}
+                  selected={flow === opt.value}
+                  color={colors.pink}
+                  onPress={() => setFlow(opt.value)}
+                />
+              ))}
+            </View>
 
             <Text style={[type.label, styles.fieldLabel]}>SYMPTOMS</Text>
             <View style={styles.chipRow}>
-              {SYMPTOMS.map((s) => (
-                <Chip key={s} label={s} selected={symptoms.includes(s)} color={colors.purple} onPress={() => toggleSymptom(s)} />
+              {SYMPTOM_OPTIONS.map((s) => (
+                <Chip
+                  key={s.key}
+                  label={s.label}
+                  selected={selectedSymptoms.includes(s.key)}
+                  color={colors.purple}
+                  onPress={() => toggleSymptom(s.key)}
+                />
               ))}
             </View>
 
             <Text style={[type.label, styles.fieldLabel]}>MOOD TODAY</Text>
             <View style={styles.moodRow}>
-              {MOOD_LEVELS.map((level) => (
+              {([0, 1, 2, 3, 4] as const).map((level) => (
                 <Pressable
                   key={level}
                   onPress={() => setMood(level)}
@@ -208,7 +220,7 @@ export default function TrackScreen() {
               ))}
             </View>
 
-            <Button label="Save today's log" onPress={() => {}} style={{ marginTop: spacing.lg }} />
+            <Button label={saving ? 'Saving…' : "Save today's log"} onPress={saveCycle} disabled={saving} style={{ marginTop: spacing.lg }} />
           </Card>
         </View>
       </ScrollView>
@@ -218,7 +230,7 @@ export default function TrackScreen() {
 
 const styles = StyleSheet.create({
   section: { paddingHorizontal: spacing.lg, marginBottom: spacing.md },
-  legendRow: { flexDirection: 'row', gap: spacing.md, paddingTop: spacing.sm, paddingLeft: spacing.xs },
+  legendRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, paddingTop: spacing.sm, paddingLeft: spacing.xs },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   fieldLabel: { marginTop: spacing.md, marginBottom: spacing.sm },
