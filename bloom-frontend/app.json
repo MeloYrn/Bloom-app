@@ -2,6 +2,7 @@
   "expo": {
     "name": "bloom-frontend",
     "slug": "bloom-frontend",
+    "scheme": "bloom",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/bloomlogo.png",
